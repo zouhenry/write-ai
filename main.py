@@ -79,11 +79,16 @@ llm_paraphrase = None  # Qwen for paraphrasing and general chat
 def initialize_model():
     global llm, llm_paraphrase
     try:
+        n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
+        device_label = "GPU" if n_gpu_layers else "CPU"
+        logger.info(f"Device: {device_label}")
+
         logger.info("Loading GRMR model...")
         llm = Llama.from_pretrained(
             repo_id="qingy2024/GRMR-V3-G4B-GGUF",
             filename="GRMR-V3-G4B-Q8_0.gguf",
             n_ctx=2048,
+            n_gpu_layers=n_gpu_layers,
             verbose=False
         )
         logger.info("GRMR model loaded successfully")
@@ -93,6 +98,7 @@ def initialize_model():
             repo_id="Qwen/Qwen2.5-1.5B-Instruct-GGUF",
             filename="qwen2.5-1.5b-instruct-q8_0.gguf",
             n_ctx=2048,
+            n_gpu_layers=n_gpu_layers,
             verbose=False
         )
         logger.info("Qwen model loaded successfully")
