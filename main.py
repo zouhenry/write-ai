@@ -83,7 +83,7 @@ def initialize_model():
         llm = Llama.from_pretrained(
             repo_id="qingy2024/GRMR-V3-G4B-GGUF",
             filename="GRMR-V3-G4B-Q8_0.gguf",
-            n_ctx=4096,
+            n_ctx=2048,
             verbose=False
         )
         logger.info("GRMR model loaded successfully")
@@ -92,7 +92,7 @@ def initialize_model():
         llm_paraphrase = Llama.from_pretrained(
             repo_id="Qwen/Qwen2.5-1.5B-Instruct-GGUF",
             filename="qwen2.5-1.5b-instruct-q8_0.gguf",
-            n_ctx=4096,
+            n_ctx=2048,
             verbose=False
         )
         logger.info("Qwen model loaded successfully")
