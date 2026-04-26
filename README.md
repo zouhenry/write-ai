@@ -4,6 +4,8 @@ Grammar correction, paraphrasing, and AI chat powered by fine-tuned LLMs (GRMR +
 
 > **Note:** Fork of [whiteh4cker-tr/grammar-llm](https://github.com/whiteh4cker-tr/grammar-llm) with PWA deployment, Qwen3.5-0.8B support, and simplified workflows.
 
+![WriteAI](static/img/grammar-llm.png)
+
 ## Features
 
 - **Grammar Check**: Real-time correction with writing quality scores (0-100)
