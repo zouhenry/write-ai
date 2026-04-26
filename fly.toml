@@ -1,0 +1,39 @@
+# Fly.io configuration for WriteAI
+app = "write-ai"
+primary_region = "ewr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 5
+    soft_limit = 3
+
+  [[http_service.checks]]
+    grace_period = "600s"
+    interval = "60s"
+    method = "GET"
+    path = "/health"
+    timeout = "30s"
+
+[deploy]
+  wait_timeout = "15m"
+
+[[vm]]
+  memory = "1gb"
+  cpus = 1
+
+[[mounts]]
+  source = "write_ai_cache"
+  destination = "/root/.cache/huggingface/hub"
