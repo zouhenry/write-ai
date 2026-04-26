@@ -1,4 +1,4 @@
-.PHONY: help run dev install lint format clean health
+.PHONY: help run run-no-gpu dev dev-no-gpu install lint format clean health
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python3
@@ -9,8 +9,10 @@ help:
 	@echo ""
 	@echo "Local Development:"
 	@echo "  make install      - Create venv and install dependencies"
-	@echo "  make dev          - Run with auto-reload (development)"
-	@echo "  make run          - Run the FastAPI server (production)"
+	@echo "  make dev          - Run with auto-reload (development, GPU)"
+	@echo "  make dev-no-gpu   - Run with auto-reload (development, CPU only)"
+	@echo "  make run          - Run the FastAPI server (production, GPU)"
+	@echo "  make run-no-gpu   - Run the FastAPI server (production, CPU only)"
 	@echo "  make health       - Check server health"
 	@echo ""
 	@echo "Docker Deployment:"
@@ -36,8 +38,14 @@ install: $(VENV)/bin/activate
 run: $(VENV)/bin/activate
 	$(PYTHON) main.py
 
+run-no-gpu: $(VENV)/bin/activate
+	NO_GPU=1 $(PYTHON) main.py
+
 dev: $(VENV)/bin/activate
 	$(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+dev-no-gpu: $(VENV)/bin/activate
+	NO_GPU=1 $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 health: $(VENV)/bin/activate
 	curl -s http://localhost:8000/health | $(PYTHON) -m json.tool
