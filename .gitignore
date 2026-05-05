@@ -174,5 +174,4 @@ $RECYCLE.BIN/
 electron-app/
 chrome-extension/
 .claude/
-.github/
 electron-app/node_modules/
