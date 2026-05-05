@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WriteAI - AI-Powered Grammar Checking</title>
+    <meta name="description"
+        content="Get instant grammar and spelling suggestions with WriteAI's AI-powered writing assistant.">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6c63ff">
+    <link rel="stylesheet" href="static/style.css">
+</head>
+
+<body class="dark-mode">
+    <div class="theme-toggle" id="themeToggle" title="Dark Mode (Click to switch to Light Mode)">
+        🌙
+    </div>
+    <button id="installBtn" class="install-btn" title="Install WriteAI as a desktop app">
+        ⬇ Install App
+    </button>
+
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+        <div class="nav-content">
+            <div class="nav-branding">
+                <h1>WriteAI</h1>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('paraphrase')">Paraphrase</button>
+                <button class="tab-btn" onclick="switchTab('chat')">AI Chat</button>
+                <button class="tab-btn" onclick="switchTab('grammar')">Grammar Check</button>
+            </div>
+            <div>
+                &nbsp;
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div id="grammarSection" class="tab-content">
+            <div class="tab-description">
+                <p>Check your text for grammar, spelling, and punctuation errors. Get instant suggestions to improve
+                    your writing.</p>
+            </div>
+            <div class="main-content">
+                <div class="text-editor-section">
+                    <div class="editor-header">
+                        <h2>Your Text</h2>
+                        <div class="editor-actions">
+                            <button id="correctBtn" onclick="correctText()">Check Grammar</button>
+                            <button id="clearBtn" onclick="clearText()" class="secondary">Clear</button>
+                        </div>
+                    </div>
+                    <div class="textarea-wrapper">
+                        <textarea id="inputText"
+                            placeholder="Start writing your text here... Example: i dont know weather to bring a umbrella today"
+                            rows="20"></textarea>
+                        <button class="copy-icon textarea-copy-btn" title="Copy to clipboard" onclick="copyToClipboard(document.getElementById('inputText').value, this)">📋</button>
+                    </div>
+                </div>
+
+                <div class="suggestions-section">
+                    <div class="writing-quality-header" id="writingQualityHeader" style="display: none;">
+                        <h2>Writing Quality</h2>
+                        <div class="writing-quality-right">
+                            <span id="writingQualityScore" class="quality-score">100</span>
+                            <button id="downloadReportBtn" class="download-report-btn" onclick="downloadReport()"
+                                title="Download Writing Quality Report">Download Report</button>
+                        </div>
+                    </div>
+                    <div class="suggestions-header">
+                        <h2>Suggestions</h2>
+                        <span id="suggestionsCount" class="count-badge">0</span>
+                    </div>
+                    <div id="suggestionsList" class="suggestions-list">
+                        <div class="empty-state">
+                            <p>No grammar issues found yet</p>
+                            <small>Start writing and click "Check Grammar" to see suggestions</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="paraphraseSection" class="tab-content active">
+            <div class="tab-description">
+                <p>Rephrase your text in different styles: corrected grammar, formal tone, casual conversation, or
+                    concise version. Choose the best fit for your needs.</p>
+            </div>
+            <div class="structure-container">
+                <div class="structure-input-section">
+                    <div class="editor-header">
+                        <h2>Your Text</h2>
+                        <div class="editor-actions">
+                            <button id="rephraseBtn" onclick="rephraseText()">Rephrase</button>
+                            <button id="clearStructureBtn" onclick="clearStructureText()"
+                                class="secondary">Clear</button>
+                        </div>
+                    </div>
+                    <textarea id="structureInputText"
+                        placeholder="Enter your text here to get alternative versions with improved sentence structure..."
+                        rows="12"></textarea>
+                </div>
+
+                <div class="structure-results-section">
+                    <div class="structure-results-header">
+                        <h2>Results</h2>
+                    </div>
+                    <div id="structureResults" class="structure-results">
+                        <div class="empty-state">
+                            <p>No results yet</p>
+                            <small>Enter text and click "Rephrase" to see alternatives</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="chatSection" class="tab-content">
+            <div class="tab-description">
+                <p>Chat with an AI assistant about writing, grammar, or any other topic. Your conversation history is
+                    saved automatically.</p>
+            </div>
+            <div class="chat-container">
+                <div id="chatHistory" class="chat-history">
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            Hello! I'm your AI assistant. How can I help you today?
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <textarea id="chatInput"
+                        placeholder="Ask me anything... (e.g., 'Explain the difference between its and it's')"
+                        rows="3"></textarea>
+                    <button id="sendChatBtn" onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loadingText">Checking grammar...</p>
+        </div>
+    </div>
+
+    <script src="static/jspdf.umd.min.js"></script>
+    <script src="static/script.js"></script>
+</body>
+
+</html>
