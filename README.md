@@ -101,9 +101,17 @@ See the [Docker GPU Support](#docker-gpu-support) section for other platform fla
 
 ### Option D — Docker
 
+**One-liner (no clone needed):**
 ```bash
-make docker-up  # Build and run in Docker
+docker run -p 8000:8000 ghcr.io/zouhenry/write-ai
 ```
+
+**Or build locally from the cloned repo:**
+```bash
+make docker-up
+```
+
+Then open `http://localhost:8000`
 
 > **Apple Silicon:** Docker Desktop runs a Linux VM with no access to Metal, so Docker is always CPU-only on macOS. For GPU acceleration, run natively with `make run`.
 
