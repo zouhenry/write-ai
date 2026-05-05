@@ -21,6 +21,7 @@ write-ai = "main:run"
 
 [tool.setuptools]
 py-modules = ["main"]
+packages = ["writeai"]
 
 [tool.setuptools.package-data]
-"main" = ["static/**/*"]
+"writeai" = ["static/**/*"]

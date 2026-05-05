@@ -17,7 +17,7 @@ from typing import List, Dict
 import logging
 import difflib
 
-STATIC_DIR = Path(__file__).parent / "static"
+STATIC_DIR = Path(__file__).parent / "writeai" / "static"
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
