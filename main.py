@@ -134,25 +134,31 @@ def _load_local(repo_id: str, filename: str, n_gpu_layers: int, label: str):
 
 def initialize_model():
     global llm, llm_paraphrase
+    from concurrent.futures import ThreadPoolExecutor
 
     grmr_api = os.getenv("GRMR_API_BASE")
     qwen_api = os.getenv("QWEN_API_BASE")
+    n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
 
-    if grmr_api:
-        logger.info(f"GRMR backend: {grmr_api}")
-        llm = _RemoteModel(grmr_api, "grmr")
-    else:
-        n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
+    def load_grmr():
+        if grmr_api:
+            logger.info(f"GRMR backend: {grmr_api}")
+            return _RemoteModel(grmr_api, "grmr")
         logger.info(f"GRMR backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
-        llm = _load_local("qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf", n_gpu_layers, "GRMR model (~4GB)")
+        return _load_local("qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf", n_gpu_layers, "GRMR model (~4GB)")
 
-    if qwen_api:
-        logger.info(f"Qwen backend: {qwen_api}")
-        llm_paraphrase = _RemoteModel(qwen_api, "qwen")
-    else:
-        n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
+    def load_qwen():
+        if qwen_api:
+            logger.info(f"Qwen backend: {qwen_api}")
+            return _RemoteModel(qwen_api, "qwen")
         logger.info(f"Qwen backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
-        llm_paraphrase = _load_local("Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q8_0.gguf", n_gpu_layers, "Qwen model (~2GB)")
+        return _load_local("Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q8_0.gguf", n_gpu_layers, "Qwen model (~2GB)")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        grmr_future = pool.submit(load_grmr)
+        qwen_future = pool.submit(load_qwen)
+        llm = grmr_future.result()
+        llm_paraphrase = qwen_future.result()
 
 def split_into_sentences(text: str) -> List[Dict]:
     """Split text into sentences using enhanced regex that handles abbreviations."""
