@@ -7,12 +7,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-COPY wheels/ wheels/
 
-# Install dependencies. When running via docker-compose, llama-cpp-python is
-# not needed (models are served by separate llama.cpp containers). It is still
-# listed in requirements.txt for local/native installs.
-RUN pip install --no-cache-dir --find-links wheels -r requirements.txt
+# llama-cpp-python is excluded — models are served by separate llama.cpp
+# containers. It remains in requirements.txt for local/native installs.
+RUN grep -v "llama-cpp-python" requirements.txt | pip install --no-cache-dir -r /dev/stdin
 
 COPY . .
 
