@@ -9,11 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from llama_cpp import Llama
 import re
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional, Any
 import logging
 import difflib
 
@@ -81,52 +80,79 @@ class RestructureResponse(BaseModel):
     corrected_highlighted_original: str = ""
     corrected_highlighted_corrected: str = ""
 
-# Initialize the models
+# ---------------------------------------------------------------------------
+# Model backend — llama-cpp-python (local) or llama.cpp server (remote HTTP)
+#
+# Set GRMR_API_BASE / QWEN_API_BASE env vars to point at a llama.cpp server.
+# When unset, falls back to loading models in-process via llama-cpp-python.
+# ---------------------------------------------------------------------------
+
+class _RemoteModel:
+    """Thin wrapper around a llama.cpp server that mimics llama-cpp-python's
+    create_chat_completion interface."""
+
+    def __init__(self, base_url: str, model_name: str):
+        import httpx
+        self._client = httpx.Client(base_url=base_url, timeout=120)
+        self._model = model_name
+
+    def create_chat_completion(self, messages: List[Dict], **kwargs) -> Dict[str, Any]:
+        # llama.cpp server ignores unknown params gracefully, but drop ones it
+        # definitely rejects (min_p maps to min_p in newer builds, keep it).
+        payload = {"model": self._model, "messages": messages, **kwargs}
+        resp = self._client.post("/v1/chat/completions", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+
 llm = None  # GRMR for grammar correction
 llm_paraphrase = None  # Qwen for paraphrasing and general chat
+
 
 def _is_cached(repo_id: str, filename: str) -> bool:
     from huggingface_hub import try_to_load_from_cache
     result = try_to_load_from_cache(repo_id=repo_id, filename=filename)
     return result is not None and result != "does_not_exist"
 
+
+def _load_local(repo_id: str, filename: str, n_gpu_layers: int, label: str):
+    from llama_cpp import Llama
+    if not _is_cached(repo_id, filename):
+        logger.info(f"Downloading {label} — this may take a few minutes...")
+    else:
+        logger.info(f"Loading {label}...")
+    model = Llama.from_pretrained(
+        repo_id=repo_id,
+        filename=filename,
+        n_ctx=2048,
+        n_gpu_layers=n_gpu_layers,
+        verbose=False,
+    )
+    logger.info(f"{label} loaded successfully")
+    return model
+
+
 def initialize_model():
     global llm, llm_paraphrase
-    try:
+
+    grmr_api = os.getenv("GRMR_API_BASE")
+    qwen_api = os.getenv("QWEN_API_BASE")
+
+    if grmr_api:
+        logger.info(f"GRMR backend: {grmr_api}")
+        llm = _RemoteModel(grmr_api, "grmr")
+    else:
         n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
-        device_label = "GPU" if n_gpu_layers else "CPU"
-        logger.info(f"Device: {device_label}")
+        logger.info(f"GRMR backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
+        llm = _load_local("qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf", n_gpu_layers, "GRMR model (~4GB)")
 
-        grmr_repo, grmr_file = "qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf"
-        if not _is_cached(grmr_repo, grmr_file):
-            logger.info("Downloading GRMR model (~4GB) — this may take a few minutes...")
-        else:
-            logger.info("Loading GRMR model...")
-        llm = Llama.from_pretrained(
-            repo_id=grmr_repo,
-            filename=grmr_file,
-            n_ctx=2048,
-            n_gpu_layers=n_gpu_layers,
-            verbose=False
-        )
-        logger.info("GRMR model loaded successfully")
-
-        qwen_repo, qwen_file = "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q8_0.gguf"
-        if not _is_cached(qwen_repo, qwen_file):
-            logger.info("Downloading Qwen model (~2GB) — this may take a few minutes...")
-        else:
-            logger.info("Loading Qwen2.5 1.5B model...")
-        llm_paraphrase = Llama.from_pretrained(
-            repo_id=qwen_repo,
-            filename=qwen_file,
-            n_ctx=2048,
-            n_gpu_layers=n_gpu_layers,
-            verbose=False
-        )
-        logger.info("Qwen model loaded successfully")
-    except Exception as e:
-        logger.error(f"Error loading models: {e}")
-        raise e
+    if qwen_api:
+        logger.info(f"Qwen backend: {qwen_api}")
+        llm_paraphrase = _RemoteModel(qwen_api, "qwen")
+    else:
+        n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
+        logger.info(f"Qwen backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
+        llm_paraphrase = _load_local("Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q8_0.gguf", n_gpu_layers, "Qwen model (~2GB)")
 
 def split_into_sentences(text: str) -> List[Dict]:
     """Split text into sentences using enhanced regex that handles abbreviations."""
@@ -912,7 +938,13 @@ async def restructure_text(request: RestructureRequest):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "grmr_loaded": llm is not None, "qwen_loaded": llm_paraphrase is not None}
+    return {
+        "status": "healthy",
+        "grmr_loaded": llm is not None,
+        "qwen_loaded": llm_paraphrase is not None,
+        "grmr_backend": os.getenv("GRMR_API_BASE", "local"),
+        "qwen_backend": os.getenv("QWEN_API_BASE", "local"),
+    }
 
 def run():
     import uvicorn

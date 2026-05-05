@@ -1,14 +1,56 @@
 version: '3.8'
 
 services:
-  grammar-llm:
+  llama-grmr:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command: >
+      --hf-repo qingy2024/GRMR-V3-G4B-GGUF
+      --hf-file GRMR-V3-G4B-Q8_0.gguf
+      --host 0.0.0.0
+      --port 8081
+      --ctx-size 2048
+    ports:
+      - "8081:8081"
+    volumes:
+      - llama_cache:/root/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  llama-qwen:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command: >
+      --hf-repo Qwen/Qwen2.5-1.5B-Instruct-GGUF
+      --hf-file qwen2.5-1.5b-instruct-q8_0.gguf
+      --host 0.0.0.0
+      --port 8082
+      --ctx-size 2048
+    ports:
+      - "8082:8082"
+    volumes:
+      - llama_cache:/root/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  app:
     build: .
     ports:
       - "8000:8000"
-    volumes:
-      - grammar_llm_models:/root/.cache/huggingface/hub
-      - ./static:/app/static
-      - ./main.py:/app/main.py
+    environment:
+      - GRMR_API_BASE=http://llama-grmr:8081
+      - QWEN_API_BASE=http://llama-qwen:8082
+    depends_on:
+      llama-grmr:
+        condition: service_healthy
+      llama-qwen:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -17,4 +59,4 @@ services:
       retries: 3
 
 volumes:
-  grammar_llm_models:
+  llama_cache:

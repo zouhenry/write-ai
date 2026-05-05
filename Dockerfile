@@ -3,14 +3,15 @@ FROM python:3.11-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 COPY wheels/ wheels/
 
-# Use a pre-built wheel if one is compatible with this platform, otherwise build from source
+# Install dependencies. When running via docker-compose, llama-cpp-python is
+# not needed (models are served by separate llama.cpp containers). It is still
+# listed in requirements.txt for local/native installs.
 RUN pip install --no-cache-dir --find-links wheels -r requirements.txt
 
 COPY . .
