@@ -1,8 +1,5 @@
 FROM python:3.11-slim
 
-# stock (default) or turbo
-ARG LLAMA_VARIANT=stock
-
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
@@ -11,9 +8,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+COPY wheels/ wheels/
 
-# Install dependencies directly (llama-cpp-python will be built from source)
-RUN pip install --no-cache-dir -r requirements.txt
+# Use a pre-built wheel if one is compatible with this platform, otherwise build from source
+RUN pip install --no-cache-dir --find-links wheels -r requirements.txt
 
 COPY . .
 

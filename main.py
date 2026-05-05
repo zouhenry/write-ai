@@ -1,3 +1,9 @@
+import sys
+
+if sys.version_info < (3, 10):
+    print(f"Error: Python 3.10+ is required (you have {sys.version.split()[0]}). Exiting.")
+    sys.exit(1)
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,9 +12,12 @@ from pydantic import BaseModel
 from llama_cpp import Llama
 import re
 import os
+from pathlib import Path
 from typing import List, Dict
 import logging
 import difflib
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +35,7 @@ app.add_middleware(
 )
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 class CorrectionRequest(BaseModel):
     text: str
@@ -76,6 +85,11 @@ class RestructureResponse(BaseModel):
 llm = None  # GRMR for grammar correction
 llm_paraphrase = None  # Qwen for paraphrasing and general chat
 
+def _is_cached(repo_id: str, filename: str) -> bool:
+    from huggingface_hub import try_to_load_from_cache
+    result = try_to_load_from_cache(repo_id=repo_id, filename=filename)
+    return result is not None and result != "does_not_exist"
+
 def initialize_model():
     global llm, llm_paraphrase
     try:
@@ -83,20 +97,28 @@ def initialize_model():
         device_label = "GPU" if n_gpu_layers else "CPU"
         logger.info(f"Device: {device_label}")
 
-        logger.info("Loading GRMR model...")
+        grmr_repo, grmr_file = "qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf"
+        if not _is_cached(grmr_repo, grmr_file):
+            logger.info("Downloading GRMR model (~2GB) — this may take a few minutes...")
+        else:
+            logger.info("Loading GRMR model...")
         llm = Llama.from_pretrained(
-            repo_id="qingy2024/GRMR-V3-G4B-GGUF",
-            filename="GRMR-V3-G4B-Q8_0.gguf",
+            repo_id=grmr_repo,
+            filename=grmr_file,
             n_ctx=2048,
             n_gpu_layers=n_gpu_layers,
             verbose=False
         )
         logger.info("GRMR model loaded successfully")
 
-        logger.info("Loading Qwen2.5 1.5B model...")
+        qwen_repo, qwen_file = "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q8_0.gguf"
+        if not _is_cached(qwen_repo, qwen_file):
+            logger.info("Downloading Qwen model (~2GB) — this may take a few minutes...")
+        else:
+            logger.info("Loading Qwen2.5 1.5B model...")
         llm_paraphrase = Llama.from_pretrained(
-            repo_id="Qwen/Qwen2.5-1.5B-Instruct-GGUF",
-            filename="qwen2.5-1.5b-instruct-q8_0.gguf",
+            repo_id=qwen_repo,
+            filename=qwen_file,
             n_ctx=2048,
             n_gpu_layers=n_gpu_layers,
             verbose=False
@@ -522,31 +544,34 @@ def reconstruct_text_from_sentences(original_text: str, sentence_data: List[Dict
 
     return ''.join(result_parts)
 
+def _hyperlink(url: str) -> str:
+    return f"\033]8;;{url}\033\\{url}\033]8;;\033\\"
+
 @app.on_event("startup")
 async def startup_event():
+    url = "http://localhost:8000"
     print("\n" + "="*60)
     print("WriteAI")
     print("="*60)
-    print(f"Server starting on http://localhost:8000")
-    print(f"(Also accessible on http://127.0.0.1:8000)")
+    print(f"Server starting on {_hyperlink(url)}")
     print("="*60 + "\n")
     initialize_model()
 
 @app.get("/")
 async def read_index():
-    return FileResponse("static/index.html")
+    return FileResponse(STATIC_DIR / "index.html")
 
 @app.get("/sw.js")
 async def service_worker():
     return FileResponse(
-        "static/sw.js",
+        STATIC_DIR / "sw.js",
         media_type="application/javascript",
         headers={"Service-Worker-Allowed": "/"}
     )
 
 @app.get("/manifest.json")
 async def manifest():
-    return FileResponse("static/manifest.json", media_type="application/manifest+json")
+    return FileResponse(STATIC_DIR / "manifest.json", media_type="application/manifest+json")
 
 
 @app.post("/correct", response_model=CorrectionResponse)
@@ -889,6 +914,9 @@ async def restructure_text(request: RestructureRequest):
 async def health_check():
     return {"status": "healthy", "grmr_loaded": llm is not None, "qwen_loaded": llm_paraphrase is not None}
 
-if __name__ == "__main__":
+def run():
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    run()

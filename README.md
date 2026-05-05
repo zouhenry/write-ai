@@ -18,50 +18,88 @@ Grammar correction, paraphrasing, and AI chat powered by fine-tuned LLMs (GRMR +
 
 ## Getting Started
 
-### Prerequisites
+> **Note:** The first run downloads models (~4.13GB), which can take 10+ minutes depending on your connection. Subsequent runs are instant.
 
-- Python 3.11+
-- `make` (optional, but recommended)
+Choose the method that fits your setup:
 
-### 1. Clone the repository
+---
 
+### Option A — `uvx` (no clone needed)
+
+The quickest way to run WriteAI. Requires [uv](https://docs.astral.sh/uv/):
+
+**Install uv** (if you don't have it):
 ```bash
-git clone https://github.com/zouhenry/write-ai.git
-cd write-ai
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# macOS (Homebrew)
+brew install uv
 ```
 
-### 2. Install dependencies
-
+**Run:**
 ```bash
-make install
-```
-
-Or without `make`:
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 3. Run the server
-
-```bash
-make dev            # Development server with GPU (auto-reload)
-make dev-no-gpu     # Development server CPU-only (auto-reload)
-make run            # Production server with GPU
-make run-no-gpu     # Production server CPU-only
-```
-
-Or without `make`:
-```bash
-python3 main.py              # GPU (default)
-NO_GPU=1 python3 main.py     # CPU only
+uvx --from git+https://github.com/zouhenry/write-ai.git write-ai
 ```
 
 Then open `http://localhost:8000`
 
-**Note:** First run downloads models (~4.13GB). Subsequent runs are instant.
+---
 
-### Docker
+### Option B — `pipx` (no clone needed)
+
+Requires [pipx](https://pipx.pypa.io/):
+
+**Install pipx** (if you don't have it):
+```bash
+# macOS (Homebrew)
+brew install pipx
+
+# Any platform
+pip install pipx
+```
+
+**Run:**
+```bash
+pipx run --spec git+https://github.com/zouhenry/write-ai.git write-ai
+```
+
+Then open `http://localhost:8000`
+
+---
+
+### Option C — Clone and run
+
+Traditional setup. Requires Python 3.10+ and `make`.
+
+```bash
+git clone https://github.com/zouhenry/write-ai.git
+cd write-ai
+make install
+make run
+```
+
+A pre-built `llama-cpp-python` wheel for **macOS Apple Silicon** is included in `wheels/`. If you're on that platform, `make install` uses it automatically — no compiler toolchain needed. On other platforms (Linux, Intel Mac, Windows), pip falls back to building from source, which requires `build-essential` / Xcode CLT and takes a few minutes.
+
+Or without `make`:
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install --find-links wheels -r requirements.txt
+python3 main.py
+```
+
+Then open `http://localhost:8000`
+
+**Want to compile from source instead?** (e.g. to enable a specific GPU backend):
+```bash
+make install-compile   # compiles with Metal/GPU support on Apple Silicon
+```
+
+See the [Docker GPU Support](#docker-gpu-support) section for other platform flags.
+
+---
+
+### Option D — Docker
 
 ```bash
 make docker-up  # Build and run in Docker
@@ -95,18 +133,26 @@ services:
 ## Available Commands
 
 ```bash
-make dev            # Development server (GPU)
-make dev-no-gpu     # Development server (CPU only)
-make run            # Production server (GPU)
-make run-no-gpu     # Production server (CPU only)
-make docker-up      # Docker deployment
-make docker-down    # Stop Docker
-make docker-logs    # View logs
-make health         # Health check
-make install        # Install dependencies
-make lint           # Lint code
-make format         # Format with Black
-make help           # Show all commands
+make install            # Install dependencies (uses pre-built wheel if compatible)
+make install-compile    # Compile llama-cpp-python from source (Metal/GPU)
+make check              # Verify environment is set up correctly
+make dev                # Development server (GPU)
+make dev-no-gpu         # Development server (CPU only)
+make run                # Production server (GPU)
+make run-no-gpu         # Production server (CPU only)
+make docker-up          # Docker deployment
+make docker-down        # Stop Docker
+make docker-logs        # View logs
+make health             # Health check
+make lint               # Lint code
+make format             # Format with Black
+make help               # Show all commands
+```
+
+**Maintainers only** (update wheels in the repo):
+```bash
+make build-wheel-gpu    # Build llama-cpp-python wheel with Metal support
+make build-wheel-cpu    # Build llama-cpp-python wheel without GPU
 ```
 
 ## API Reference

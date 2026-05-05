@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Treat wheel files as binary so git doesn't mangle them
+*.whl binary
