@@ -99,7 +99,7 @@ def initialize_model():
 
         grmr_repo, grmr_file = "qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf"
         if not _is_cached(grmr_repo, grmr_file):
-            logger.info("Downloading GRMR model (~2GB) — this may take a few minutes...")
+            logger.info("Downloading GRMR model (~4GB) — this may take a few minutes...")
         else:
             logger.info("Loading GRMR model...")
         llm = Llama.from_pretrained(
