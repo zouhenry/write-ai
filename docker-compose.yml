@@ -1,35 +1,12 @@
 services:
-  llama-grmr:
-    image: ghcr.io/ggml-org/llama.cpp:server
-    command: >
-      --hf-repo qingy2024/GRMR-V3-G4B-GGUF
-      --hf-file GRMR-V3-G4B-Q8_0.gguf
-      --host 0.0.0.0
-      --port 8081
-      --ctx-size 2048
-    ports:
-      - "8081:8081"
-    volumes:
-      - llama_cache:/root/.cache
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 120s
-
-  app:
+  grammar-llm:
     build: .
     ports:
       - "8000:8000"
-    extra_hosts:
-      - "model-runner.docker.internal:host-gateway"
-    environment:
-      - GRMR_API_BASE=http://llama-grmr:8081
-      - QWEN_API_BASE=http://model-runner.docker.internal:12434/engines/llama.cpp/v1
-    depends_on:
-      llama-grmr:
-        condition: service_healthy
+    volumes:
+      - grammar_llm_models:/root/.cache/huggingface/hub
+      - ./writeai/static:/app/writeai/static
+      - ./main.py:/app/main.py
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -38,4 +15,4 @@ services:
       retries: 3
 
 volumes:
-  llama_cache:
+  grammar_llm_models:
