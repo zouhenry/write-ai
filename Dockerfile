@@ -3,14 +3,15 @@ FROM python:3.11-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
+    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+COPY wheels/ wheels/
 
-# llama-cpp-python is excluded — models are served by separate llama.cpp
-# containers. It remains in requirements.txt for local/native installs.
-RUN grep -v "llama-cpp-python" requirements.txt | pip install --no-cache-dir -r /dev/stdin
+# Use a pre-built wheel if one is compatible with this platform, otherwise build from source
+RUN pip install --no-cache-dir --find-links wheels -r requirements.txt
 
 COPY . .
 
