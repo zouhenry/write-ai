@@ -1,4 +1,4 @@
-.PHONY: help run run-no-gpu dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check
+.PHONY: help run run-no-gpu run-sm run-md run-lg dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python3
@@ -13,7 +13,10 @@ help:
 	@echo "  make install-compile  - Compile llama-cpp-python from source with Metal/GPU support"
 	@echo "  make dev              - Run with auto-reload (development, GPU)"
 	@echo "  make dev-no-gpu       - Run with auto-reload (development, CPU only)"
-	@echo "  make run              - Run the FastAPI server (production, GPU)"
+	@echo "  make run              - Run the FastAPI server (production, GPU, default quant)"
+	@echo "  make run-sm           - Run with small model (~2.4GB)"
+	@echo "  make run-md           - Run with medium model (~3.2GB)"
+	@echo "  make run-lg           - Run with large model (~4.2GB)"
 	@echo "  make run-no-gpu       - Run the FastAPI server (production, CPU only)"
 	@echo "  make health           - Check server health"
 	@echo "  make check            - Verify environment is set up correctly"
@@ -61,6 +64,15 @@ build-wheel-cpu: $(VENV)/bin/activate
 
 run: $(VENV)/bin/activate
 	$(PYTHON) main.py
+
+run-sm: $(VENV)/bin/activate
+	GEMMA_QUANT=sm $(PYTHON) main.py
+
+run-md: $(VENV)/bin/activate
+	GEMMA_QUANT=md $(PYTHON) main.py
+
+run-lg: $(VENV)/bin/activate
+	GEMMA_QUANT=lg $(PYTHON) main.py
 
 run-no-gpu: $(VENV)/bin/activate
 	NO_GPU=1 $(PYTHON) main.py

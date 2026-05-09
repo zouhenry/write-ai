@@ -224,16 +224,27 @@ curl http://localhost:8000/health
 
 ## Models
 
-| Role | Model | Quant | Size |
-|------|-------|-------|------|
-| Grammar | [qingy2024/GRMR-V3-G4B-GGUF](https://huggingface.co/qingy2024/GRMR-V3-G4B-GGUF) | Q4_K_M | ~2.6GB |
-| Paraphrase/Chat | [dahus/gemma-4-e2b-it-Q3_K_M-GGUF](https://huggingface.co/dahus/gemma-4-e2b-it-Q3_K_M-GGUF) | Q3_K_M | ~2.4GB |
+A single [Gemma-4-E2B](https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF) model handles all tasks (grammar, paraphrase, chat), run via llama.cpp (2048 ctx) with GPU acceleration or CPU-only with `NO_GPU=1`.
 
-Both run via llama.cpp (2048 ctx) with GPU acceleration, or CPU-only with `NO_GPU=1`.
+Select a model size with the `GEMMA_QUANT` env var (default: `sm`):
+
+| `GEMMA_QUANT` | Size | Notes |
+|---------------|------|-------|
+| `sm` | ~2.4GB | Default, good for low-memory systems |
+| `md` | ~3.2GB | Better quality/size balance |
+| `lg` | ~4.2GB | Higher quality, more RAM required |
+
+```bash
+make run-sm   # or run-md, run-lg
+```
+
+For Docker, edit the `environment` section in `docker-compose.yml`:
+```yaml
+environment:
+  - GEMMA_QUANT=sm  # or md, lg
+```
 
 **Model cache location:** `~/.cache/huggingface/hub/` — downloaded automatically on first run. In Docker, this directory is bind-mounted from the host so models are never re-downloaded across container rebuilds.
-
-To swap a model, update the `repo_id` and `filename` in `models.py`'s `initialize_model()`.
 
 ## Troubleshooting
 

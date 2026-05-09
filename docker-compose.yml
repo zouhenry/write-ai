@@ -3,6 +3,10 @@ services:
     build: .
     ports:
       - "8000:8000"
+    environment:
+      - GEMMA_QUANT=sm  # sm (~2.4GB, default), md (~3.2GB), lg (~4.2GB)
+      # - NO_GPU=1      # uncomment for CPU-only
+      # - GEMMA_API_BASE=http://host:8080  # uncomment to use a remote llama.cpp server
     volumes:
       - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub
       - ./writeai/static:/app/writeai/static
