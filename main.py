@@ -123,7 +123,7 @@ def _load_local(repo_id: str, filename: str, n_gpu_layers: int, label: str):
     model = Llama.from_pretrained(
         repo_id=repo_id,
         filename=filename,
-        n_ctx=2048,
+        n_ctx=4096,
         n_gpu_layers=n_gpu_layers,
         verbose=False,
     )
@@ -826,7 +826,7 @@ async def chat_with_llm(request: ChatRequest):
             temperature=0.7,
             top_p=0.95,
             top_k=40,
-            max_tokens=2048,
+            max_tokens=4098,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>", "User:", "Assistant:"]
         )
         
@@ -882,7 +882,7 @@ async def restructure_text(request: RestructureRequest):
                 "No explanations, no extra keys, no markdown fences — just the JSON object.\n"
                 "Example output: {\"formal\": \"...\", \"casual\": \"...\", \"concise\": \"...\"}"
             )},
-            {"role": "user", "content": corrected}
+            {"role": "user", "content": "paraphrase this" + corrected}
         ]
 
         response_paraphrase = llm_paraphrase.create_chat_completion(
