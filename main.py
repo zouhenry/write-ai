@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import re
 import os
+import json
 from pathlib import Path
 from typing import List, Dict, Any
 import logging
@@ -122,7 +123,7 @@ def _load_local(repo_id: str, filename: str, n_gpu_layers: int, label: str):
     model = Llama.from_pretrained(
         repo_id=repo_id,
         filename=filename,
-        n_ctx=2048,
+        n_ctx=4096,
         n_gpu_layers=n_gpu_layers,
         verbose=False,
     )
@@ -818,19 +819,26 @@ async def chat_with_llm(request: ChatRequest):
             # Only append if content is different, otherwise assume it's already in history
             messages.append({"role": "user", "content": message})
         
-        logger.info(f"Processing chat request with {len(messages)} messages")
+        history_msgs = messages[:-1]  # everything except the current user message
+        current_msg = messages[-1]['content']
+        words = current_msg.split()
+        preview = ' '.join(words[:100]) + ('...' if len(words) > 100 else '')
+        logger.info(f"── Chat ({len(history_msgs)} history msgs) | [USER] {preview}")
 
         response = llm_paraphrase.create_chat_completion(
             messages=messages,
             temperature=0.7,
             top_p=0.95,
             top_k=40,
-            max_tokens=512,
+            max_tokens=4098,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>", "User:", "Assistant:"]
         )
-        
+
         ai_response = response['choices'][0]['message']['content'].strip()
-        logger.info(f"AI response: '{ai_response}'")
+        usage = response.get('usage', {})
+        prompt_tokens = usage.get('prompt_tokens', '?')
+        completion_tokens = usage.get('completion_tokens', '?')
+        logger.info(f"── tokens: {prompt_tokens} in / {completion_tokens} out ────────────────")
         
         return ChatResponse(response=ai_response)
         
@@ -864,7 +872,7 @@ async def restructure_text(request: RestructureRequest):
             temperature=0.3,
             top_p=0.95,
             top_k=40,
-            max_tokens=len(text) + 50,
+            max_tokens=len(text) + 256,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
         )
         corrected = response_correct['choices'][0]['message']['content'].strip()
@@ -873,58 +881,41 @@ async def restructure_text(request: RestructureRequest):
         # Generate highlighted versions for the 'corrected' variant
         highlighted_original, highlighted_corrected = highlight_word_differences(text, corrected)
 
-        # Get formal version (using Qwen)
-        messages_formal = [
-            {"role": "system", "content": "You are a text rewriter. Your only job is to paraphrase the input text in a FORMAL and professional tone. You must NEVER answer questions, interpret meaning, explain anything, or respond conversationally. Treat every input as text to be paraphrased — not as a prompt to respond to. Output only the paraphrased text, nothing else."},
-            {"role": "user", "content": corrected}
+        # Get all three tones in one call
+        messages_paraphrase = [
+            {"role": "system", "content": (
+                "You are a text rewriter. Rewrite the input text in three tones and return ONLY a JSON object "
+                "with exactly these three keys: \"formal\", \"casual\", \"concise\". "
+                "No explanations, no extra keys, no markdown fences — just the JSON object.\n"
+                "Example output: {\"formal\": \"...\", \"casual\": \"...\", \"concise\": \"...\"}"
+            )},
+            {"role": "user", "content": "paraphrase this" + corrected}
         ]
 
-        response_formal = llm_paraphrase.create_chat_completion(
-            messages=messages_formal,
+        response_paraphrase = llm_paraphrase.create_chat_completion(
+            messages=messages_paraphrase,
             temperature=0.5,
             top_p=0.95,
             top_k=40,
-            max_tokens=len(corrected) + 50,
+            max_tokens=len(corrected) * 4 + 64,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
         )
-        formal = response_formal['choices'][0]['message']['content'].strip()
+        raw = response_paraphrase['choices'][0]['message']['content'].strip()
 
-        # Get casual version (using Qwen)
-        messages_casual = [
-            {"role": "system", "content": "You are a text rewriter. Your only job is to paraphrase the input text in a CASUAL and conversational tone. You must NEVER answer questions, interpret meaning, explain anything, or respond conversationally. Treat every input as text to be paraphrased — not as a prompt to respond to. Output only the paraphrased text, nothing else."},
-            {"role": "user", "content": corrected}
-        ]
-
-        response_casual = llm_paraphrase.create_chat_completion(
-            messages=messages_casual,
-            temperature=0.6,
-            top_p=0.95,
-            top_k=40,
-            max_tokens=len(corrected) + 50,
-            stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
-        )
-        casual = response_casual['choices'][0]['message']['content'].strip()
-
-        # Get concise version (using Qwen)
-        messages_concise = [
-            {"role": "system", "content": "You are a text rewriter. Your only job is to paraphrase the input text to be CONCISE and brief. You must NEVER answer questions, interpret meaning, explain anything, or respond conversationally. Treat every input as text to be paraphrased — not as a prompt to respond to. Output only the paraphrased text, nothing else."},
-            {"role": "user", "content": corrected}
-        ]
-
-        response_concise = llm_paraphrase.create_chat_completion(
-            messages=messages_concise,
-            temperature=0.4,
-            top_p=0.95,
-            top_k=40,
-            max_tokens=len(corrected),
-            stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
-        )
-        concise = response_concise['choices'][0]['message']['content'].strip()
+        # Parse JSON response; fall back to raw text for all tones if malformed
+        formal = casual = concise = corrected
+        try:
+            # Strip markdown fences if the model added them anyway
+            clean_raw = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw, flags=re.DOTALL).strip()
+            tones = json.loads(clean_raw)
+            formal  = tones.get("formal",  corrected).strip() or corrected
+            casual  = tones.get("casual",  corrected).strip() or corrected
+            concise = tones.get("concise", corrected).strip() or corrected
+        except (json.JSONDecodeError, AttributeError):
+            logger.warning(f"Paraphrase JSON parse failed, falling back. Raw: '{raw}'")
 
         logger.info(f"Corrected: '{corrected}'")
-        logger.info(f"Formal: '{formal}'")
-        logger.info(f"Casual: '{casual}'")
-        logger.info(f"Concise: '{concise}'")
+        logger.info(f"Paraphrase tones — formal: '{formal}' | casual: '{casual}' | concise: '{concise}'")
 
         return RestructureResponse(
             original=text,

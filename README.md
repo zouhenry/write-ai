@@ -103,7 +103,7 @@ See the [Docker GPU Support](#docker-gpu-support) section for other platform fla
 
 **One-liner (no clone needed):**
 ```bash
-docker run -p 8000:8000 ghcr.io/zouhenry/write-ai
+docker pull ghcr.io/zouhenry/write-ai && docker run -p 8000:8000 ghcr.io/zouhenry/write-ai
 ```
 
 **Or build locally from the cloned repo:**
@@ -230,6 +230,17 @@ curl http://localhost:8000/health
 Both quantized to 8-bit, run via llama.cpp with GPU acceleration (or CPU-only with `NO_GPU=1`).
 
 Browse more GGUF models on [Hugging Face](https://huggingface.co/models?search=gguf). To swap a model, update the `repo_id` and `filename` in `main.py`'s `initialize_model()`.
+
+## Troubleshooting
+
+### Changes not appearing in the browser
+
+WriteAI ships as a PWA with a service worker that caches `script.js`, `style.css`, and other static assets. If you update those files and the browser still shows old behavior:
+
+1. **Hard reload:** `Cmd+Shift+R` (Mac) / `Ctrl+Shift+R` (Windows/Linux)
+2. **Or via DevTools:** Application → Service Workers → click "Skip waiting", then reload
+
+If you're shipping a new version of the frontend, bump `CACHE_VERSION` in `writeai/static/sw.js` (e.g. `v1.2` → `v1.3`) to force all clients to fetch fresh assets on their next visit.
 
 ## Contributing
 

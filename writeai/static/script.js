@@ -1,3 +1,18 @@
+async function checkApiStatus() {
+    try {
+        const res = await fetch('/health', { method: 'GET' });
+        setStatusBanner(!res.ok);
+    } catch {
+        setStatusBanner(true);
+    }
+}
+
+function setStatusBanner(offline) {
+    document.getElementById('statusBanner').style.display = offline ? 'flex' : 'none';
+}
+
+marked.use({ breaks: true });
+
 let currentCorrections = {
     suggestions: [],
     correctedText: ''
@@ -662,30 +677,230 @@ function switchTab(tabName) {
 }
 
 // AI Chat logic
-let chatHistory = [];
+const MAX_CONVERSATIONS = 50;
+let chatHistory = []; // messages for the active conversation (in-memory mirror)
+let activeConversationId = null;
 
-function loadChatHistory() {
-    const savedHistory = localStorage.getItem('grammarLlmChatHistory');
-    if (savedHistory) {
-        try {
-            chatHistory = JSON.parse(savedHistory);
-            const chatHistoryDiv = document.getElementById('chatHistory');
-            // Keep the initial AI message if history is empty
-            if (chatHistory.length > 0) {
-                chatHistoryDiv.innerHTML = '';
-                chatHistory.forEach(msg => {
-                    renderChatMessage(msg.role, msg.content, false);
-                });
-            }
-        } catch (e) {
-            console.error('Error loading chat history:', e);
-            chatHistory = [];
+function generateId() {
+    return crypto.randomUUID();
+}
+
+function loadConversations() {
+    try {
+        return JSON.parse(localStorage.getItem('grammarLlmConversations') || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveConversations(conversations) {
+    try {
+        localStorage.setItem('grammarLlmConversations', JSON.stringify(conversations));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+            showToast('Storage limit reached — please delete some conversations', true);
         }
     }
 }
 
-function saveChatHistory() {
-    localStorage.setItem('grammarLlmChatHistory', JSON.stringify(chatHistory));
+function getActiveConversation() {
+    const conversations = loadConversations();
+    return conversations.find(c => c.id === activeConversationId) || null;
+}
+
+function updateActiveConversationMessages() {
+    const conversations = loadConversations();
+    const idx = conversations.findIndex(c => c.id === activeConversationId);
+    if (idx !== -1) {
+        conversations[idx].messages = [...chatHistory];
+        saveConversations(conversations);
+    }
+}
+
+function enforceStorageCap(conversations) {
+    if (conversations.length <= MAX_CONVERSATIONS) return conversations;
+    return [...conversations]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, MAX_CONVERSATIONS);
+}
+
+function migrateOldHistory() {
+    const old = localStorage.getItem('grammarLlmChatHistory');
+    if (!old) return;
+    try {
+        const messages = JSON.parse(old);
+        if (messages.length > 0) {
+            const conversations = loadConversations();
+            if (conversations.length === 0) {
+                const migrated = {
+                    id: generateId(),
+                    title: 'Previous conversation',
+                    createdAt: Date.now(),
+                    messages
+                };
+                saveConversations([migrated]);
+            }
+        }
+    } catch {
+        // ignore malformed old data
+    }
+    localStorage.removeItem('grammarLlmChatHistory');
+}
+
+function initConversations() {
+    migrateOldHistory();
+    let conversations = loadConversations();
+
+    if (conversations.length === 0) {
+        // First run — create an empty default conversation
+        const first = {
+            id: generateId(),
+            title: 'New conversation',
+            createdAt: Date.now(),
+            messages: []
+        };
+        conversations = [first];
+        saveConversations(conversations);
+    }
+
+    // Set active to the most recent
+    conversations.sort((a, b) => b.createdAt - a.createdAt);
+    activeConversationId = localStorage.getItem('grammarLlmActiveConversationId') || conversations[0].id;
+
+    // Validate stored active ID still exists
+    if (!conversations.find(c => c.id === activeConversationId)) {
+        activeConversationId = conversations[0].id;
+    }
+    localStorage.setItem('grammarLlmActiveConversationId', activeConversationId);
+
+    const active = conversations.find(c => c.id === activeConversationId);
+    chatHistory = active ? [...active.messages] : [];
+
+    renderChatHistoryView();
+    renderSidebar();
+}
+
+function renderChatHistoryView() {
+    const chatHistoryDiv = document.getElementById('chatHistory');
+    chatHistoryDiv.textContent = ''; // safe clear
+    if (chatHistory.length === 0) {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'message ai-message';
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.textContent = "Hello! I'm your AI assistant. How can I help you today?";
+        welcomeDiv.appendChild(contentDiv);
+        chatHistoryDiv.appendChild(welcomeDiv);
+        return;
+    }
+    chatHistory.forEach(msg => renderChatMessage(msg.role, msg.content, false));
+    scrollToBottom();
+}
+
+function renderSidebar() {
+    const list = document.getElementById('conversationList');
+    if (!list) return;
+    const conversations = loadConversations();
+    conversations.sort((a, b) => b.createdAt - a.createdAt);
+
+    list.textContent = ''; // safe clear
+    conversations.forEach(conv => {
+        const item = document.createElement('div');
+        item.className = 'conversation-item' + (conv.id === activeConversationId ? ' active' : '');
+        item.dataset.id = conv.id;
+
+        const title = document.createElement('span');
+        title.className = 'conversation-item-title';
+        title.textContent = conv.title;
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'conversation-delete-btn';
+        delBtn.title = 'Delete conversation';
+        delBtn.textContent = '🗑';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteConversation(conv.id);
+        });
+
+        item.appendChild(title);
+        item.appendChild(delBtn);
+        item.addEventListener('click', () => switchConversation(conv.id));
+        list.appendChild(item);
+    });
+}
+
+function switchConversation(id) {
+    if (id === activeConversationId) return;
+    updateActiveConversationMessages();
+    activeConversationId = id;
+    localStorage.setItem('grammarLlmActiveConversationId', id);
+
+    const conversations = loadConversations();
+    const conv = conversations.find(c => c.id === id);
+    chatHistory = conv ? [...conv.messages] : [];
+    renderChatHistoryView();
+    renderSidebar();
+    document.getElementById('chatInput').focus();
+}
+
+function startNewChat() {
+    updateActiveConversationMessages();
+    const newConv = {
+        id: generateId(),
+        title: 'New conversation',
+        createdAt: Date.now(),
+        messages: []
+    };
+    let conversations = loadConversations();
+    // Remove any existing empty conversations before adding the new one
+    conversations = conversations.filter(c => c.messages.length > 0 || c.id === activeConversationId);
+    conversations.unshift(newConv);
+    conversations = enforceStorageCap(conversations);
+    saveConversations(conversations);
+    activeConversationId = newConv.id;
+    localStorage.setItem('grammarLlmActiveConversationId', activeConversationId);
+    chatHistory = [];
+    renderChatHistoryView();
+    renderSidebar();
+    document.getElementById('chatInput').focus();
+}
+
+function deleteConversation(id) {
+    let conversations = loadConversations();
+    conversations = conversations.filter(c => c.id !== id);
+    saveConversations(conversations);
+
+    if (id === activeConversationId) {
+        if (conversations.length === 0) {
+            startNewChat();
+            return;
+        }
+        conversations.sort((a, b) => b.createdAt - a.createdAt);
+        switchConversation(conversations[0].id);
+        return;
+    }
+    renderSidebar();
+}
+
+async function generateConversationTitle(firstUserMessage, firstAiResponse) {
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: 'Summarize this conversation topic in 6 words or fewer.',
+                history: [
+                    { role: 'user', content: firstUserMessage },
+                    { role: 'assistant', content: firstAiResponse }
+                ]
+            })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.response ? data.response.trim().replace(/['"]/g, '') : null;
+    } catch {
+        return null;
+    }
 }
 
 function renderChatMessage(role, content, save = true) {
@@ -695,14 +910,19 @@ function renderChatMessage(role, content, save = true) {
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = content;
+    if (role === 'assistant') {
+        contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(content));
+    } else {
+        contentDiv.textContent = content;
+    }
 
     messageDiv.appendChild(contentDiv);
     chatHistoryDiv.appendChild(messageDiv);
 
     if (save) {
         chatHistory.push({ role, content });
-        saveChatHistory();
+        updateActiveConversationMessages();
+        renderSidebar();
     }
 
     scrollToBottom();
@@ -890,6 +1110,31 @@ async function sendChatMessage() {
         // Render AI message
         renderChatMessage('assistant', data.response);
 
+        // Generate title after first exchange
+        const isFirstExchange = chatHistory.filter(m => m.role === 'user').length === 1;
+        if (isFirstExchange) {
+            // Set placeholder title immediately using first 40 chars of user message
+            const conversations = loadConversations();
+            const idx = conversations.findIndex(c => c.id === activeConversationId);
+            if (idx !== -1 && conversations[idx].title === 'New conversation') {
+                conversations[idx].title = message.slice(0, 40);
+                saveConversations(conversations);
+                renderSidebar();
+            }
+            // Capture ID now — activeConversationId may change before .then() resolves
+            const titleForConvId = activeConversationId;
+            generateConversationTitle(message, data.response).then(title => {
+                if (!title) return;
+                const convs = loadConversations();
+                const i = convs.findIndex(c => c.id === titleForConvId);
+                if (i !== -1) {
+                    convs[i].title = title;
+                    saveConversations(convs);
+                    renderSidebar();
+                }
+            }).catch(() => {});
+        }
+
     } catch (error) {
         console.error('Error:', error);
         chatHistoryDiv.removeChild(loadingMsgDiv);
@@ -907,11 +1152,18 @@ document.getElementById('chatInput').addEventListener('keydown', function(e) {
 
 // Load history on start
 window.addEventListener('DOMContentLoaded', () => {
-    loadChatHistory();
+    initConversations();
 
     // Restore the last active tab
     const savedTab = localStorage.getItem('activeTab');
     switchTab(savedTab || 'paraphrase');
+
+    // API status: check on load and whenever the page regains focus
+    checkApiStatus();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkApiStatus();
+    });
+    window.addEventListener('focus', checkApiStatus);
 });
 
 // PWA: service worker registration
