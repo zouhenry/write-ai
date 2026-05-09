@@ -45,18 +45,18 @@ install: $(VENV)/bin/activate
 
 install-compile: $(VENV)/bin/activate
 	$(PIP) install --upgrade pip
-	CMAKE_ARGS="-DGGML_METAL=on" $(PIP) install llama-cpp-python==0.3.20 --no-binary llama-cpp-python
+	CMAKE_ARGS="-DGGML_METAL=on" $(PIP) install llama-cpp-python==0.3.22 --no-binary llama-cpp-python
 	$(PIP) install -r requirements.txt
 	@echo "✓ Compiled and installed with Metal/GPU support."
 
 build-wheel-gpu: $(VENV)/bin/activate
 	@mkdir -p $(WHEELS_DIR)
-	CMAKE_ARGS="-DGGML_METAL=on" $(PIP) wheel llama-cpp-python==0.3.20 --no-binary llama-cpp-python -w $(WHEELS_DIR)
+	CMAKE_ARGS="-DGGML_METAL=on" $(PIP) wheel llama-cpp-python==0.3.22 --no-binary llama-cpp-python -w $(WHEELS_DIR)
 	@echo "✓ GPU wheel built in $(WHEELS_DIR)/"
 
 build-wheel-cpu: $(VENV)/bin/activate
 	@mkdir -p $(WHEELS_DIR)
-	$(PIP) wheel llama-cpp-python==0.3.20 --no-binary llama-cpp-python -w $(WHEELS_DIR)
+	$(PIP) wheel llama-cpp-python==0.3.22 --no-binary llama-cpp-python -w $(WHEELS_DIR)
 	@echo "✓ CPU wheel built in $(WHEELS_DIR)/"
 
 run: $(VENV)/bin/activate
@@ -104,7 +104,7 @@ format: $(VENV)/bin/activate
 	$(PYTHON) -m black main.py
 
 format-ui:
-	npx prettier --single-quote --write 'writeai/static/**/*.{js,css,html}' --ignore-path '' --ignore 'writeai/static/jspdf.umd.min.js'
+	npx prettier --single-quote --write 'writeai/static/**/*.{js,css,html}' --ignore-path ''
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
