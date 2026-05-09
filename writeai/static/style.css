@@ -1286,6 +1286,7 @@ body.dark-mode .chat-input-area textarea {
         width: 100%;
         min-width: unset;
         max-height: 180px;
+        overflow: auto;
     }
 }
 
