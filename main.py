@@ -819,7 +819,10 @@ async def chat_with_llm(request: ChatRequest):
             # Only append if content is different, otherwise assume it's already in history
             messages.append({"role": "user", "content": message})
         
-        logger.info(f"Processing chat request with {len(messages)} messages")
+        logger.info(f"── Chat request ({len(messages)} messages) ──────────────────")
+        for msg in messages:
+            prefix = f"[{msg['role'].upper()}]"
+            logger.info(f"{prefix} {msg['content']}")
 
         response = llm_paraphrase.create_chat_completion(
             messages=messages,
@@ -829,9 +832,13 @@ async def chat_with_llm(request: ChatRequest):
             max_tokens=4098,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>", "User:", "Assistant:"]
         )
-        
+
         ai_response = response['choices'][0]['message']['content'].strip()
-        logger.info(f"AI response: '{ai_response}'")
+        usage = response.get('usage', {})
+        prompt_tokens = usage.get('prompt_tokens', '?')
+        completion_tokens = usage.get('completion_tokens', '?')
+        logger.info(f"[ASSISTANT] {ai_response}")
+        logger.info(f"── tokens: {prompt_tokens} in / {completion_tokens} out ────────────────")
         
         return ChatResponse(response=ai_response)
         
