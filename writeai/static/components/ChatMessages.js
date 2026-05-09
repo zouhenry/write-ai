@@ -1,18 +1,7 @@
 import { ref, watch, nextTick } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import {
-  loadConversations, saveConversations, setActiveConversationId,
+  loadConversations, saveConversations,
 } from '../utils/storage.js';
-
-function showToast(message, isError = false) {
-  const toast = document.createElement('div');
-  toast.textContent = message;
-  toast.className = 'toast' + (isError ? ' toast-error' : '');
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
-  }, 3000);
-}
 
 export default {
   name: 'ChatMessages',
