@@ -27,13 +27,17 @@ export default {
 
     function deleteConversation(id) {
       let convs = conversations.value.filter((c) => c.id !== id);
-      saveConversations(convs);
       if (id === activeConversationId.value) {
-        if (convs.length === 0) { newChat(); return; }
+        if (convs.length === 0) {
+          // no conversations left — newChat() will save and update conversations.value
+          newChat();
+          return;
+        }
         convs.sort((a, b) => b.createdAt - a.createdAt);
         activeConversationId.value = convs[0].id;
         setActiveConversationId(convs[0].id);
       }
+      saveConversations(convs);
       conversations.value = convs;
     }
 

@@ -1,4 +1,4 @@
-import { createApp, ref, provide, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import { createApp, ref, provide, onMounted, onUnmounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { useApiStatus } from './composables/useApiStatus.js';
 import { useTheme     } from './composables/useTheme.js';
 import { usePwa       } from './composables/usePwa.js';
@@ -40,16 +40,25 @@ const App = {
     provide('canInstall',  canInstall);
     provide('install',     install);
 
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') checkApiStatus();
+    }
+    function onHashChange() {
+      const tab = window.location.hash.slice(1);
+      if (VALID_TABS.includes(tab)) setTab(tab);
+    }
+
     onMounted(() => {
       checkApiStatus();
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') checkApiStatus();
-      });
+      document.addEventListener('visibilitychange', onVisibilityChange);
       window.addEventListener('focus', checkApiStatus);
-      window.addEventListener('hashchange', () => {
-        const tab = window.location.hash.slice(1);
-        if (VALID_TABS.includes(tab)) setTab(tab);
-      });
+      window.addEventListener('hashchange', onHashChange);
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', checkApiStatus);
+      window.removeEventListener('hashchange', onHashChange);
     });
 
     return { activeTab };
