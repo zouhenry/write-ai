@@ -1,4 +1,4 @@
-.PHONY: help run run-no-gpu dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format clean clean-venv health check
+.PHONY: help run run-no-gpu dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python3
@@ -30,7 +30,8 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint             - Lint Python code"
-	@echo "  make format           - Format code with black"
+	@echo "  make format           - Format Python code with black"
+	@echo "  make format-ui        - Format JS/CSS/HTML in writeai/static with prettier"
 	@echo "  make clean            - Remove cache files"
 	@echo "  make clean-venv       - Remove virtual environment"
 
@@ -101,6 +102,9 @@ lint: $(VENV)/bin/activate
 
 format: $(VENV)/bin/activate
 	$(PYTHON) -m black main.py
+
+format-ui:
+	npx prettier --single-quote --write 'writeai/static/**/*.{js,css,html}' --ignore-path '' --ignore 'writeai/static/jspdf.umd.min.js'
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
