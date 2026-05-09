@@ -662,8 +662,9 @@ function switchTab(tabName) {
         }
     });
 
-    // Save the active tab to localStorage
+    // Save the active tab to localStorage and update URL hash
     localStorage.setItem('activeTab', tabName);
+    history.replaceState(null, '', '#' + tabName);
 
     // Focus input based on tab
     if (tabName === 'grammar') {
@@ -1154,9 +1155,17 @@ document.getElementById('chatInput').addEventListener('keydown', function(e) {
 window.addEventListener('DOMContentLoaded', () => {
     initConversations();
 
-    // Restore the last active tab
+    // Restore tab from URL hash, then localStorage, then default
+    const validTabs = ['grammar', 'paraphrase', 'chat'];
+    const hashTab = window.location.hash.slice(1);
     const savedTab = localStorage.getItem('activeTab');
-    switchTab(savedTab || 'paraphrase');
+    switchTab(validTabs.includes(hashTab) ? hashTab : (validTabs.includes(savedTab) ? savedTab : 'paraphrase'));
+
+    // Sync tab when user navigates with back/forward
+    window.addEventListener('hashchange', () => {
+        const tab = window.location.hash.slice(1);
+        if (validTabs.includes(tab)) switchTab(tab);
+    });
 
     // API status: check on load and whenever the page regains focus
     checkApiStatus();
