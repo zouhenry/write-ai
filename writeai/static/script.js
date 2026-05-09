@@ -852,6 +852,8 @@ function startNewChat() {
         messages: []
     };
     let conversations = loadConversations();
+    // Remove any existing empty conversations before adding the new one
+    conversations = conversations.filter(c => c.messages.length > 0 || c.id === activeConversationId);
     conversations.unshift(newConv);
     conversations = enforceStorageCap(conversations);
     saveConversations(conversations);
