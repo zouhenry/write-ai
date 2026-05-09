@@ -798,11 +798,86 @@ function renderChatHistoryView() {
 }
 
 function renderSidebar() {
-    // implemented in Task 5
+    const list = document.getElementById('conversationList');
+    if (!list) return;
+    const conversations = loadConversations();
+    conversations.sort((a, b) => b.createdAt - a.createdAt);
+
+    list.textContent = ''; // safe clear
+    conversations.forEach(conv => {
+        const item = document.createElement('div');
+        item.className = 'conversation-item' + (conv.id === activeConversationId ? ' active' : '');
+        item.dataset.id = conv.id;
+
+        const title = document.createElement('span');
+        title.className = 'conversation-item-title';
+        title.textContent = conv.title;
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'conversation-delete-btn';
+        delBtn.title = 'Delete conversation';
+        delBtn.textContent = '🗑';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteConversation(conv.id);
+        });
+
+        item.appendChild(title);
+        item.appendChild(delBtn);
+        item.addEventListener('click', () => switchConversation(conv.id));
+        list.appendChild(item);
+    });
+}
+
+function switchConversation(id) {
+    if (id === activeConversationId) return;
+    updateActiveConversationMessages();
+    activeConversationId = id;
+    localStorage.setItem('grammarLlmActiveConversationId', id);
+
+    const conversations = loadConversations();
+    const conv = conversations.find(c => c.id === id);
+    chatHistory = conv ? [...conv.messages] : [];
+    renderChatHistoryView();
+    renderSidebar();
+    document.getElementById('chatInput').focus();
 }
 
 function startNewChat() {
-    // implemented in Task 5
+    updateActiveConversationMessages();
+    const newConv = {
+        id: generateId(),
+        title: 'New conversation',
+        createdAt: Date.now(),
+        messages: []
+    };
+    let conversations = loadConversations();
+    conversations.unshift(newConv);
+    conversations = enforceStorageCap(conversations);
+    saveConversations(conversations);
+    activeConversationId = newConv.id;
+    localStorage.setItem('grammarLlmActiveConversationId', activeConversationId);
+    chatHistory = [];
+    renderChatHistoryView();
+    renderSidebar();
+    document.getElementById('chatInput').focus();
+}
+
+function deleteConversation(id) {
+    let conversations = loadConversations();
+    conversations = conversations.filter(c => c.id !== id);
+    saveConversations(conversations);
+
+    if (id === activeConversationId) {
+        if (conversations.length === 0) {
+            startNewChat();
+            return;
+        }
+        conversations.sort((a, b) => b.createdAt - a.createdAt);
+        switchConversation(conversations[0].id);
+        return;
+    }
+    renderSidebar();
 }
 
 function renderChatMessage(role, content, save = true) {
