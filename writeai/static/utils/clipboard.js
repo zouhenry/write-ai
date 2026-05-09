@@ -1,4 +1,4 @@
-export function copyToClipboard(text, iconEl) {
+export function copyToClipboard(text, iconEl, onError) {
   navigator.clipboard
     .writeText(text)
     .then(() => {
@@ -12,6 +12,6 @@ export function copyToClipboard(text, iconEl) {
     })
     .catch((err) => {
       console.error('Failed to copy:', err);
-      alert('Failed to copy to clipboard');
+      if (onError) onError(err);
     });
 }

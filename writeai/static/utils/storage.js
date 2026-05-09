@@ -18,7 +18,8 @@ export function saveConversations(conversations) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
   } catch (e) {
-    if (e.name === 'QuotaExceededError') throw e;
+    console.error('saveConversations failed:', e);
+    throw e;
   }
 }
 
