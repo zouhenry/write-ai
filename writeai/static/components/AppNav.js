@@ -3,15 +3,24 @@ import { inject } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 export default {
   name: 'AppNav',
   setup() {
-    const activeTab   = inject('activeTab');
-    const setTab      = inject('setTab');
-    const isOffline   = inject('isOffline');
-    const isDark      = inject('isDark');
+    const activeTab = inject('activeTab');
+    const setTab = inject('setTab');
+    const isOffline = inject('isOffline');
+    const isDark = inject('isDark');
     const toggleTheme = inject('toggleTheme');
     const isInstalled = inject('isInstalled');
-    const canInstall  = inject('canInstall');
-    const install     = inject('install');
-    return { activeTab, setTab, isOffline, isDark, toggleTheme, isInstalled, canInstall, install };
+    const canInstall = inject('canInstall');
+    const install = inject('install');
+    return {
+      activeTab,
+      setTab,
+      isOffline,
+      isDark,
+      toggleTheme,
+      isInstalled,
+      canInstall,
+      install,
+    };
   },
   template: `
     <div>

@@ -1,7 +1,7 @@
 export default {
   name: 'ChatSidebar',
   props: {
-    conversations:        { type: Array,  required: true },
+    conversations: { type: Array, required: true },
     activeConversationId: { type: String, required: true },
   },
   emits: ['select', 'delete', 'new-chat'],

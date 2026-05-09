@@ -1,4 +1,8 @@
-import { ref, reactive, computed } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import {
+  ref,
+  reactive,
+  computed,
+} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { copyToClipboard } from '../utils/clipboard.js';
 
 function escapeHtml(unsafe) {
@@ -17,7 +21,9 @@ function showToast(message, isError = false) {
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.style.animation = 'toastSlideOut 0.3s ease';
-    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
   }, 3000);
 }
 
@@ -36,7 +42,10 @@ function findBestOccurrence(haystack, needle, approxIndex) {
   let bestDist = Math.abs(best[0] - approxIndex);
   for (let i = 1; i < matches.length; i++) {
     const dist = Math.abs(matches[i][0] - approxIndex);
-    if (dist < bestDist) { best = matches[i]; bestDist = dist; }
+    if (dist < bestDist) {
+      best = matches[i];
+      bestDist = dist;
+    }
   }
   return best;
 }
@@ -44,23 +53,26 @@ function findBestOccurrence(haystack, needle, approxIndex) {
 export default {
   name: 'GrammarTab',
   setup() {
-    const inputText          = ref('');
-    const corrections        = reactive({ suggestions: [], correctedText: '' });
+    const inputText = ref('');
+    const corrections = reactive({ suggestions: [], correctedText: '' });
     const appliedSuggestions = ref(new Set());
-    const loading            = ref(false);
-    const lastCaretPosition  = ref(0);
+    const loading = ref(false);
+    const lastCaretPosition = ref(0);
     const isApplyingSuggestion = ref(false);
-    const textareaRef        = ref(null);
+    const textareaRef = ref(null);
 
     const unappliedSuggestions = computed(() =>
       corrections.suggestions
         .map((s, i) => ({ ...s, globalIndex: i }))
-        .filter((s) => !appliedSuggestions.value.has(s.globalIndex))
+        .filter((s) => !appliedSuggestions.value.has(s.globalIndex)),
     );
 
     async function correctText() {
       const text = inputText.value.trim();
-      if (!text) { alert('Please enter some text to check grammar.'); return; }
+      if (!text) {
+        alert('Please enter some text to check grammar.');
+        return;
+      }
       loading.value = true;
       try {
         const res = await fetch('/correct', {
@@ -70,9 +82,9 @@ export default {
         });
         if (!res.ok) throw new Error('Server error: ' + res.status);
         const data = await res.json();
-        corrections.suggestions   = data.suggestions || [];
+        corrections.suggestions = data.suggestions || [];
         corrections.correctedText = data.corrected_text || '';
-        appliedSuggestions.value  = new Set();
+        appliedSuggestions.value = new Set();
       } catch (err) {
         console.error(err);
         corrections.suggestions = [];
@@ -99,21 +111,26 @@ export default {
         if (!res.ok) throw new Error('Failed to apply suggestion');
         const result = await res.json();
         inputText.value = result.corrected_text;
-        appliedSuggestions.value = new Set([...appliedSuggestions.value, globalIndex]);
+        appliedSuggestions.value = new Set([
+          ...appliedSuggestions.value,
+          globalIndex,
+        ]);
         showToast('Applied correction for ' + sug.sentence);
       } catch (err) {
         console.error(err);
         showToast('Error applying suggestion. Please try again.', true);
       } finally {
-        setTimeout(() => { isApplyingSuggestion.value = false; }, 100);
+        setTimeout(() => {
+          isApplyingSuggestion.value = false;
+        }, 100);
       }
     }
 
     function clearText() {
-      inputText.value           = '';
-      corrections.suggestions   = [];
+      inputText.value = '';
+      corrections.suggestions = [];
       corrections.correctedText = '';
-      appliedSuggestions.value  = new Set();
+      appliedSuggestions.value = new Set();
     }
 
     function onKeydown(e) {
@@ -124,27 +141,34 @@ export default {
     }
 
     function updateCaret() {
-      if (textareaRef.value) lastCaretPosition.value = textareaRef.value.selectionStart;
+      if (textareaRef.value)
+        lastCaretPosition.value = textareaRef.value.selectionStart;
     }
 
     function onSuggestionHover(sug) {
       if (!textareaRef.value) return;
-      const text  = inputText.value;
+      const text = inputText.value;
       const start = sug.start_index ?? 0;
-      const span  = findBestOccurrence(text, sug.original, start);
+      const span = findBestOccurrence(text, sug.original, start);
       if (span) {
         textareaRef.value.focus();
         textareaRef.value.setSelectionRange(span[0], span[1]);
       } else if (sug.start_index != null && sug.end_index != null) {
         const s = Math.max(0, Math.min(text.length, sug.start_index));
         const e = Math.max(0, Math.min(text.length, sug.end_index));
-        if (e > s) { textareaRef.value.focus(); textareaRef.value.setSelectionRange(s, e); }
+        if (e > s) {
+          textareaRef.value.focus();
+          textareaRef.value.setSelectionRange(s, e);
+        }
       }
     }
 
     function onSuggestionLeave() {
       if (!textareaRef.value) return;
-      textareaRef.value.setSelectionRange(lastCaretPosition.value, lastCaretPosition.value);
+      textareaRef.value.setSelectionRange(
+        lastCaretPosition.value,
+        lastCaretPosition.value,
+      );
     }
 
     function copyInput(e) {
@@ -156,9 +180,21 @@ export default {
     }
 
     return {
-      inputText, corrections, loading, textareaRef,
-      unappliedSuggestions, correctText, applySingleSuggestion, clearText,
-      onKeydown, updateCaret, onSuggestionHover, onSuggestionLeave, copyInput, escapeHtml, sanitize,
+      inputText,
+      corrections,
+      loading,
+      textareaRef,
+      unappliedSuggestions,
+      correctText,
+      applySingleSuggestion,
+      clearText,
+      onKeydown,
+      updateCaret,
+      onSuggestionHover,
+      onSuggestionLeave,
+      copyInput,
+      escapeHtml,
+      sanitize,
     };
   },
   template: `

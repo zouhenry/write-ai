@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'grammarLlmConversations';
-const ACTIVE_KEY  = 'grammarLlmActiveConversationId';
+const ACTIVE_KEY = 'grammarLlmActiveConversationId';
 export const MAX_CONVERSATIONS = 50;
 
 export function generateId() {
@@ -46,12 +46,14 @@ export function migrateOldHistory() {
     if (messages.length > 0) {
       const conversations = loadConversations();
       if (conversations.length === 0) {
-        saveConversations([{
-          id: generateId(),
-          title: 'Previous conversation',
-          createdAt: Date.now(),
-          messages,
-        }]);
+        saveConversations([
+          {
+            id: generateId(),
+            title: 'Previous conversation',
+            createdAt: Date.now(),
+            messages,
+          },
+        ]);
       }
     }
   } catch {

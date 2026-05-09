@@ -1,19 +1,21 @@
-import { ref, watch, nextTick } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import {
-  loadConversations, saveConversations,
-} from '../utils/storage.js';
+  ref,
+  watch,
+  nextTick,
+} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import { loadConversations, saveConversations } from '../utils/storage.js';
 
 export default {
   name: 'ChatMessages',
   props: {
-    conversations:        { type: Array,  required: true },
+    conversations: { type: Array, required: true },
     activeConversationId: { type: String, required: true },
   },
   emits: ['update-conversations'],
   setup(props, { emit }) {
     const chatHistory = ref([]);
-    const inputText   = ref('');
-    const loading     = ref(false);
+    const inputText = ref('');
+    const loading = ref(false);
     const chatAreaRef = ref(null);
 
     function loadHistory(id) {
@@ -21,17 +23,22 @@ export default {
       chatHistory.value = conv ? [...conv.messages] : [];
     }
 
-    watch(() => props.activeConversationId, (id) => loadHistory(id), { immediate: true });
+    watch(
+      () => props.activeConversationId,
+      (id) => loadHistory(id),
+      { immediate: true },
+    );
 
     function scrollToBottom() {
       nextTick(() => {
-        if (chatAreaRef.value) chatAreaRef.value.scrollTop = chatAreaRef.value.scrollHeight;
+        if (chatAreaRef.value)
+          chatAreaRef.value.scrollTop = chatAreaRef.value.scrollHeight;
       });
     }
 
     function persistMessages(id, messages) {
       const convs = props.conversations.map((c) =>
-        c.id === id ? { ...c, messages: [...messages] } : c
+        c.id === id ? { ...c, messages: [...messages] } : c,
       );
       saveConversations(convs);
       emit('update-conversations', convs);
@@ -45,15 +52,17 @@ export default {
           body: JSON.stringify({
             message: 'Summarize this conversation topic in 6 words or fewer.',
             history: [
-              { role: 'user',      content: firstUserMsg },
-              { role: 'assistant', content: firstAiMsg   },
+              { role: 'user', content: firstUserMsg },
+              { role: 'assistant', content: firstAiMsg },
             ],
           }),
         });
         if (!res.ok) return null;
         const data = await res.json();
         return data.response ? data.response.trim().replace(/['"]/g, '') : null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     }
 
     async function sendChatMessage() {
@@ -61,7 +70,10 @@ export default {
       if (!message) return;
       inputText.value = '';
 
-      chatHistory.value = [...chatHistory.value, { role: 'user', content: message }];
+      chatHistory.value = [
+        ...chatHistory.value,
+        { role: 'user', content: message },
+      ];
       persistMessages(props.activeConversationId, chatHistory.value);
       loading.value = true;
       scrollToBottom();
@@ -70,42 +82,57 @@ export default {
         const res = await fetch('/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, history: chatHistory.value.slice(-10) }),
+          body: JSON.stringify({
+            message,
+            history: chatHistory.value.slice(-10),
+          }),
         });
         if (!res.ok) throw new Error('Server error: ' + res.status);
         const data = await res.json();
 
-        chatHistory.value = [...chatHistory.value, { role: 'assistant', content: data.response }];
+        chatHistory.value = [
+          ...chatHistory.value,
+          { role: 'assistant', content: data.response },
+        ];
         persistMessages(props.activeConversationId, chatHistory.value);
 
-        const userCount = chatHistory.value.filter((m) => m.role === 'user').length;
+        const userCount = chatHistory.value.filter(
+          (m) => m.role === 'user',
+        ).length;
         if (userCount === 1) {
           const placeholderConvs = props.conversations.map((c) =>
-            c.id === props.activeConversationId && c.title === 'New conversation'
+            c.id === props.activeConversationId &&
+            c.title === 'New conversation'
               ? { ...c, title: message.slice(0, 40) }
-              : c
+              : c,
           );
           saveConversations(placeholderConvs);
           emit('update-conversations', placeholderConvs);
 
           const titleConvId = props.activeConversationId;
-          generateTitle(message, data.response).then((title) => {
-            if (!title) return;
-            const latest = loadConversations();
-            const i = latest.findIndex((c) => c.id === titleConvId);
-            if (i !== -1) {
-              latest[i].title = title;
-              saveConversations(latest);
-              emit('update-conversations', latest);
-            }
-          }).catch(() => {});
+          generateTitle(message, data.response)
+            .then((title) => {
+              if (!title) return;
+              const latest = loadConversations();
+              const i = latest.findIndex((c) => c.id === titleConvId);
+              if (i !== -1) {
+                latest[i].title = title;
+                saveConversations(latest);
+                emit('update-conversations', latest);
+              }
+            })
+            .catch(() => {});
         }
       } catch (err) {
         console.error(err);
-        chatHistory.value = [...chatHistory.value, {
-          role: 'assistant',
-          content: 'Sorry, I encountered an error processing your request. Please try again.',
-        }];
+        chatHistory.value = [
+          ...chatHistory.value,
+          {
+            role: 'assistant',
+            content:
+              'Sorry, I encountered an error processing your request. Please try again.',
+          },
+        ];
         persistMessages(props.activeConversationId, chatHistory.value);
       } finally {
         loading.value = false;
@@ -114,14 +141,25 @@ export default {
     }
 
     function onKeydown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
     }
 
     function sanitize(content) {
       return window.DOMPurify.sanitize(window.marked.parse(content));
     }
 
-    return { chatHistory, inputText, loading, chatAreaRef, sendChatMessage, onKeydown, sanitize };
+    return {
+      chatHistory,
+      inputText,
+      loading,
+      chatAreaRef,
+      sendChatMessage,
+      onKeydown,
+      sanitize,
+    };
   },
   template: `
     <div class="chat-container">

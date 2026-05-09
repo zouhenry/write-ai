@@ -1,21 +1,27 @@
-import { ref, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import {
-  initConversations, saveConversations, enforceStorageCap,
-  generateId, setActiveConversationId,
+  ref,
+  onMounted,
+} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import {
+  initConversations,
+  saveConversations,
+  enforceStorageCap,
+  generateId,
+  setActiveConversationId,
 } from '../utils/storage.js';
-import ChatSidebar  from './ChatSidebar.js';
+import ChatSidebar from './ChatSidebar.js';
 import ChatMessages from './ChatMessages.js';
 
 export default {
   name: 'ChatTab',
   components: { ChatSidebar, ChatMessages },
   setup() {
-    const conversations        = ref([]);
+    const conversations = ref([]);
     const activeConversationId = ref('');
 
     onMounted(() => {
       const init = initConversations();
-      conversations.value        = init.conversations;
+      conversations.value = init.conversations;
       activeConversationId.value = init.activeId;
     });
 
@@ -44,16 +50,18 @@ export default {
 
     function newChat() {
       const newConv = {
-        id: generateId(), title: 'New conversation',
-        createdAt: Date.now(), messages: [],
+        id: generateId(),
+        title: 'New conversation',
+        createdAt: Date.now(),
+        messages: [],
       };
       let convs = conversations.value.filter(
-        (c) => c.messages.length > 0 || c.id === activeConversationId.value
+        (c) => c.messages.length > 0 || c.id === activeConversationId.value,
       );
       convs.unshift(newConv);
       convs = enforceStorageCap(convs);
       saveConversations(convs);
-      conversations.value        = convs;
+      conversations.value = convs;
       activeConversationId.value = newConv.id;
       setActiveConversationId(newConv.id);
     }
@@ -63,8 +71,12 @@ export default {
     }
 
     return {
-      conversations, activeConversationId,
-      selectConversation, deleteConversation, newChat, onUpdateConversations,
+      conversations,
+      activeConversationId,
+      selectConversation,
+      deleteConversation,
+      newChat,
+      onUpdateConversations,
     };
   },
   template: `

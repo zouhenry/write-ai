@@ -1,4 +1,7 @@
-import { ref, computed } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import {
+  ref,
+  computed,
+} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { copyToClipboard } from '../utils/clipboard.js';
 
 function escapeHtml(unsafe) {
@@ -17,30 +20,55 @@ function showToast(message, isError = false) {
   document.body.appendChild(toast);
   setTimeout(() => {
     toast.style.animation = 'toastSlideOut 0.3s ease';
-    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
   }, 3000);
 }
 
 export default {
   name: 'ParaphraseTab',
   setup() {
-    const inputText    = ref('');
+    const inputText = ref('');
     const rephraseData = ref(null);
-    const loading      = ref(false);
+    const loading = ref(false);
 
     const results = computed(() => {
       if (!rephraseData.value) return [];
       return [
-        { label: 'Corrected', badge: 'Grammar Fixed', value: rephraseData.value.corrected,  isDiff: true  },
-        { label: 'Formal',    badge: 'Formal',        value: rephraseData.value.formal,     isDiff: false },
-        { label: 'Casual',    badge: 'Casual',        value: rephraseData.value.casual,     isDiff: false },
-        { label: 'Concise',   badge: 'Concise',       value: rephraseData.value.concise,    isDiff: false },
+        {
+          label: 'Corrected',
+          badge: 'Grammar Fixed',
+          value: rephraseData.value.corrected,
+          isDiff: true,
+        },
+        {
+          label: 'Formal',
+          badge: 'Formal',
+          value: rephraseData.value.formal,
+          isDiff: false,
+        },
+        {
+          label: 'Casual',
+          badge: 'Casual',
+          value: rephraseData.value.casual,
+          isDiff: false,
+        },
+        {
+          label: 'Concise',
+          badge: 'Concise',
+          value: rephraseData.value.concise,
+          isDiff: false,
+        },
       ];
     });
 
     async function rephraseText() {
       const text = inputText.value.trim();
-      if (!text) { alert('Please enter some text to restructure.'); return; }
+      if (!text) {
+        alert('Please enter some text to restructure.');
+        return;
+      }
       loading.value = true;
       try {
         const res = await fetch('/restructure', {
@@ -59,7 +87,7 @@ export default {
     }
 
     function clearText() {
-      inputText.value    = '';
+      inputText.value = '';
       rephraseData.value = null;
     }
 
@@ -71,7 +99,17 @@ export default {
       return window.DOMPurify.sanitize(html);
     }
 
-    return { inputText, rephraseData, loading, results, rephraseText, clearText, copyResult, escapeHtml, sanitize };
+    return {
+      inputText,
+      rephraseData,
+      loading,
+      results,
+      rephraseText,
+      clearText,
+      copyResult,
+      escapeHtml,
+      sanitize,
+    };
   },
   template: `
     <div class="tab-content active">
