@@ -9,7 +9,7 @@ export default {
     conversations:        { type: Array,  required: true },
     activeConversationId: { type: String, required: true },
   },
-  emits: ['update-conversations', 'update-active-id'],
+  emits: ['update-conversations'],
   setup(props, { emit }) {
     const chatHistory = ref([]);
     const inputText   = ref('');
@@ -30,13 +30,11 @@ export default {
     }
 
     function persistMessages(id, messages) {
-      const convs = loadConversations();
-      const idx   = convs.findIndex((c) => c.id === id);
-      if (idx !== -1) {
-        convs[idx].messages = [...messages];
-        saveConversations(convs);
-        emit('update-conversations', convs);
-      }
+      const convs = props.conversations.map((c) =>
+        c.id === id ? { ...c, messages: [...messages] } : c
+      );
+      saveConversations(convs);
+      emit('update-conversations', convs);
     }
 
     async function generateTitle(firstUserMsg, firstAiMsg) {
@@ -82,19 +80,24 @@ export default {
 
         const userCount = chatHistory.value.filter((m) => m.role === 'user').length;
         if (userCount === 1) {
-          const convs = loadConversations();
-          const idx   = convs.findIndex((c) => c.id === props.activeConversationId);
-          if (idx !== -1 && convs[idx].title === 'New conversation') {
-            convs[idx].title = message.slice(0, 40);
-            saveConversations(convs);
-            emit('update-conversations', convs);
-          }
+          const placeholderConvs = props.conversations.map((c) =>
+            c.id === props.activeConversationId && c.title === 'New conversation'
+              ? { ...c, title: message.slice(0, 40) }
+              : c
+          );
+          saveConversations(placeholderConvs);
+          emit('update-conversations', placeholderConvs);
+
           const titleConvId = props.activeConversationId;
           generateTitle(message, data.response).then((title) => {
             if (!title) return;
-            const c2  = loadConversations();
-            const i   = c2.findIndex((c) => c.id === titleConvId);
-            if (i !== -1) { c2[i].title = title; saveConversations(c2); emit('update-conversations', c2); }
+            const latest = loadConversations();
+            const i = latest.findIndex((c) => c.id === titleConvId);
+            if (i !== -1) {
+              latest[i].title = title;
+              saveConversations(latest);
+              emit('update-conversations', latest);
+            }
           }).catch(() => {});
         }
       } catch (err) {
