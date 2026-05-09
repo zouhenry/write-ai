@@ -838,7 +838,6 @@ async def chat_with_llm(request: ChatRequest):
         usage = response.get('usage', {})
         prompt_tokens = usage.get('prompt_tokens', '?')
         completion_tokens = usage.get('completion_tokens', '?')
-        logger.info(f"[ASSISTANT] {ai_response}")
         logger.info(f"── tokens: {prompt_tokens} in / {completion_tokens} out ────────────────")
         
         return ChatResponse(response=ai_response)
