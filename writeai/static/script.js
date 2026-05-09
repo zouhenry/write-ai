@@ -899,6 +899,7 @@ function renderChatMessage(role, content, save = true) {
     if (save) {
         chatHistory.push({ role, content });
         updateActiveConversationMessages();
+        renderSidebar();
     }
 
     scrollToBottom();
