@@ -677,30 +677,74 @@ function switchTab(tabName) {
 }
 
 // AI Chat logic
-let chatHistory = [];
+const MAX_CONVERSATIONS = 50;
+let chatHistory = []; // messages for the active conversation (in-memory mirror)
+let activeConversationId = null;
 
-function loadChatHistory() {
-    const savedHistory = localStorage.getItem('grammarLlmChatHistory');
-    if (savedHistory) {
-        try {
-            chatHistory = JSON.parse(savedHistory);
-            const chatHistoryDiv = document.getElementById('chatHistory');
-            // Keep the initial AI message if history is empty
-            if (chatHistory.length > 0) {
-                chatHistoryDiv.innerHTML = '';
-                chatHistory.forEach(msg => {
-                    renderChatMessage(msg.role, msg.content, false);
-                });
-            }
-        } catch (e) {
-            console.error('Error loading chat history:', e);
-            chatHistory = [];
+function generateId() {
+    return crypto.randomUUID();
+}
+
+function loadConversations() {
+    try {
+        return JSON.parse(localStorage.getItem('grammarLlmConversations') || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveConversations(conversations) {
+    try {
+        localStorage.setItem('grammarLlmConversations', JSON.stringify(conversations));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+            showToast('Storage full — oldest conversations removed', true);
         }
     }
 }
 
-function saveChatHistory() {
-    localStorage.setItem('grammarLlmChatHistory', JSON.stringify(chatHistory));
+function getActiveConversation() {
+    const conversations = loadConversations();
+    return conversations.find(c => c.id === activeConversationId) || null;
+}
+
+function updateActiveConversationMessages() {
+    const conversations = loadConversations();
+    const idx = conversations.findIndex(c => c.id === activeConversationId);
+    if (idx !== -1) {
+        conversations[idx].messages = [...chatHistory];
+        saveConversations(conversations);
+    }
+}
+
+function enforceStorageCap(conversations) {
+    if (conversations.length <= MAX_CONVERSATIONS) return conversations;
+    return conversations
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, MAX_CONVERSATIONS);
+}
+
+function migrateOldHistory() {
+    const old = localStorage.getItem('grammarLlmChatHistory');
+    if (!old) return;
+    try {
+        const messages = JSON.parse(old);
+        if (messages.length > 0) {
+            const conversations = loadConversations();
+            if (conversations.length === 0) {
+                const migrated = {
+                    id: generateId(),
+                    title: 'Previous conversation',
+                    createdAt: Date.now(),
+                    messages
+                };
+                saveConversations([migrated]);
+            }
+        }
+    } catch {
+        // ignore malformed old data
+    }
+    localStorage.removeItem('grammarLlmChatHistory');
 }
 
 function renderChatMessage(role, content, save = true) {
