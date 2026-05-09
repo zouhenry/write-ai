@@ -56,9 +56,17 @@ def initialize_model():
     gemma_api = os.getenv("GEMMA_API_BASE")
     n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
 
+    _GEMMA_VARIANTS = {
+        "sm": ("dahus/gemma-4-e2b-it-Q3_K_M-GGUF", "gemma-4-e2b-Q3_K_M.gguf", "Gemma-4-E2B Q3_K_M (~2.4GB)"),
+        "md": ("lmstudio-community/gemma-4-E2B-it-GGUF", "gemma-4-E2B-it-Q4_K_M.gguf", "Gemma-4-E2B Q4_K_M (~3.2GB)"),
+        "lg": ("lmstudio-community/gemma-4-E2B-it-GGUF", "gemma-4-E2B-it-Q6_K.gguf", "Gemma-4-E2B Q6_K (~4.2GB)"),
+    }
+    quant = os.getenv("GEMMA_QUANT", "sm").lower()
+    repo_id, filename, label = _GEMMA_VARIANTS.get(quant, _GEMMA_VARIANTS["sm"])
+
     if gemma_api:
         logger.info(f"Gemma backend: {gemma_api}")
         llm = _RemoteModel(gemma_api, "gemma")
     else:
         logger.info(f"Gemma backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
-        llm = _load_local("lmstudio-community/gemma-4-E2B-it-GGUF", "gemma-4-E2B-it-Q4_K_M.gguf", n_gpu_layers, "Gemma-4-E2B (~3.2GB)")
+        llm = _load_local(repo_id, filename, n_gpu_layers, label)
