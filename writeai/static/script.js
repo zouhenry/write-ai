@@ -719,7 +719,7 @@ function updateActiveConversationMessages() {
 
 function enforceStorageCap(conversations) {
     if (conversations.length <= MAX_CONVERSATIONS) return conversations;
-    return conversations
+    return [...conversations]
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, MAX_CONVERSATIONS);
 }
@@ -765,7 +765,7 @@ function renderChatMessage(role, content, save = true) {
 
     if (save) {
         chatHistory.push({ role, content });
-        saveChatHistory();
+        updateActiveConversationMessages();
     }
 
     scrollToBottom();
