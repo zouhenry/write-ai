@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - grammar_llm_models:/root/.cache/huggingface/hub
+      - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub
       - ./writeai/static:/app/writeai/static
       - ./main.py:/app/main.py
     restart: unless-stopped
@@ -13,6 +13,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-volumes:
-  grammar_llm_models:

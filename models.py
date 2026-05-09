@@ -2,12 +2,10 @@ import os
 import time
 import logging
 from typing import List, Dict, Any
-from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
-llm = None          # GRMR for grammar correction
-llm_paraphrase = None  # Qwen for paraphrasing and general chat
+llm = None  # Gemma-4-E2B for all tasks
 
 
 class _RemoteModel:
@@ -26,17 +24,6 @@ class _RemoteModel:
         return resp.json()
 
 
-class _LocalModel:
-    """Wraps a local Llama instance to add inference timing."""
-
-    def __init__(self, model, label: str):
-        self._model = model
-        self._label = label
-
-    def create_chat_completion(self, messages: List[Dict], **kwargs) -> Dict[str, Any]:
-        return self._model.create_chat_completion(messages=messages, **kwargs)
-
-
 def _is_cached(repo_id: str, filename: str) -> bool:
     from huggingface_hub import try_to_load_from_cache
     result = try_to_load_from_cache(repo_id=repo_id, filename=filename)
@@ -53,8 +40,10 @@ def _load_local(repo_id: str, filename: str, n_gpu_layers: int, label: str):
     model = Llama.from_pretrained(
         repo_id=repo_id,
         filename=filename,
-        n_ctx=16384,
+        n_ctx=4096,
         n_gpu_layers=n_gpu_layers,
+        use_mmap=True,
+        use_mlock=False,
         verbose=False,
     )
     logger.info(f"{label} loaded in {time.time() - t0:.1f}s")
@@ -62,29 +51,14 @@ def _load_local(repo_id: str, filename: str, n_gpu_layers: int, label: str):
 
 
 def initialize_model():
-    global llm, llm_paraphrase
+    global llm
 
-    grmr_api = os.getenv("GRMR_API_BASE")
-    qwen_api = os.getenv("QWEN_API_BASE")
+    gemma_api = os.getenv("GEMMA_API_BASE")
     n_gpu_layers = 0 if os.getenv("NO_GPU", "").lower() in ("1", "true", "yes") else -1
 
-    def load_grmr():
-        if grmr_api:
-            logger.info(f"GRMR backend: {grmr_api}")
-            return _RemoteModel(grmr_api, "grmr")
-        logger.info(f"GRMR backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
-        return _LocalModel(_load_local("qingy2024/GRMR-V3-G4B-GGUF", "GRMR-V3-G4B-Q8_0.gguf", n_gpu_layers, "GRMR model (~4GB)"), "grmr")
-
-    def load_qwen():
-        if qwen_api:
-            logger.info(f"Qwen backend: {qwen_api}")
-            model_name = "ai/qwen2.5:1.5B-F16" if "model-runner.docker.internal" in qwen_api else "qwen"
-            return _RemoteModel(qwen_api, model_name)
-        logger.info(f"Qwen backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
-        return _LocalModel(_load_local("Qwen/Qwen2.5-1.5B-Instruct-GGUF", "qwen2.5-1.5b-instruct-q8_0.gguf", n_gpu_layers, "Qwen model (~2GB)"), "qwen")
-
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        grmr_future = pool.submit(load_grmr)
-        qwen_future = pool.submit(load_qwen)
-        llm = grmr_future.result()
-        llm_paraphrase = qwen_future.result()
+    if gemma_api:
+        logger.info(f"Gemma backend: {gemma_api}")
+        llm = _RemoteModel(gemma_api, "gemma")
+    else:
+        logger.info(f"Gemma backend: local ({'GPU' if n_gpu_layers else 'CPU'})")
+        llm = _load_local("lmstudio-community/gemma-4-E2B-it-GGUF", "gemma-4-E2B-it-Q4_K_M.gguf", n_gpu_layers, "Gemma-4-E2B (~3.2GB)")

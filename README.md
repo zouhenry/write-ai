@@ -1,6 +1,6 @@
 # WriteAI
 
-Grammar correction, paraphrasing, and AI chat powered by fine-tuned LLMs (GRMR + Qwen3.5). GPU-accelerated (GPU) by default, with CPU-only fallback.
+Grammar correction, paraphrasing, and AI chat powered by fine-tuned LLMs (GRMR + Gemma 4). GPU-accelerated by default, with CPU-only fallback.
 
 > **Note:** Fork of [whiteh4cker-tr/grammar-llm](https://github.com/whiteh4cker-tr/grammar-llm) with PWA deployment, Qwen3.5-0.8B support, and simplified workflows.
 
@@ -224,12 +224,16 @@ curl http://localhost:8000/health
 
 ## Models
 
-**Grammar:** GRMR-V3-G4B (4096 ctx)
-**Paraphrase/Chat:** Qwen3.5-0.8B (2048 ctx)
+| Role | Model | Quant | Size |
+|------|-------|-------|------|
+| Grammar | [qingy2024/GRMR-V3-G4B-GGUF](https://huggingface.co/qingy2024/GRMR-V3-G4B-GGUF) | Q4_K_M | ~2.6GB |
+| Paraphrase/Chat | [dahus/gemma-4-e2b-it-Q3_K_M-GGUF](https://huggingface.co/dahus/gemma-4-e2b-it-Q3_K_M-GGUF) | Q3_K_M | ~2.4GB |
 
-Both quantized to 8-bit, run via llama.cpp with GPU acceleration (or CPU-only with `NO_GPU=1`).
+Both run via llama.cpp (2048 ctx) with GPU acceleration, or CPU-only with `NO_GPU=1`.
 
-Browse more GGUF models on [Hugging Face](https://huggingface.co/models?search=gguf). To swap a model, update the `repo_id` and `filename` in `main.py`'s `initialize_model()`.
+**Model cache location:** `~/.cache/huggingface/hub/` — downloaded automatically on first run. In Docker, this directory is bind-mounted from the host so models are never re-downloaded across container rebuilds.
+
+To swap a model, update the `repo_id` and `filename` in `models.py`'s `initialize_model()`.
 
 ## Troubleshooting
 
