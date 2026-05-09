@@ -1129,7 +1129,7 @@ async function sendChatMessage() {
                     saveConversations(convs);
                     renderSidebar();
                 }
-            });
+            }).catch(() => {});
         }
 
     } catch (error) {
