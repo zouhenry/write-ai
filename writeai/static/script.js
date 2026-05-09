@@ -698,7 +698,7 @@ function saveConversations(conversations) {
         localStorage.setItem('grammarLlmConversations', JSON.stringify(conversations));
     } catch (e) {
         if (e.name === 'QuotaExceededError') {
-            showToast('Storage full — oldest conversations removed', true);
+            showToast('Storage limit reached — please delete some conversations', true);
         }
     }
 }
@@ -1119,11 +1119,12 @@ async function sendChatMessage() {
                 saveConversations(conversations);
                 renderSidebar();
             }
-            // Generate real title in background — no await
+            // Capture ID now — activeConversationId may change before .then() resolves
+            const titleForConvId = activeConversationId;
             generateConversationTitle(message, data.response).then(title => {
                 if (!title) return;
                 const convs = loadConversations();
-                const i = convs.findIndex(c => c.id === activeConversationId);
+                const i = convs.findIndex(c => c.id === titleForConvId);
                 if (i !== -1) {
                     convs[i].title = title;
                     saveConversations(convs);
