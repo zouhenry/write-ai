@@ -1,5 +1,5 @@
 // Increment this version on every deploy to bust stale caches
-const CACHE_VERSION = 'v1.3.1';
+const CACHE_VERSION = 'v1.4';
 const CACHE_NAME = `writeai-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
