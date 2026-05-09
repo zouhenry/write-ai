@@ -7,6 +7,7 @@ if sys.version_info < (3, 10):
 import re
 import os
 import json
+import time
 import logging
 from pathlib import Path
 from typing import List, Dict
@@ -275,6 +276,7 @@ async def chat_with_llm(request: ChatRequest):
         preview = ' '.join(words[:100]) + ('...' if len(words) > 100 else '')
         logger.info(f"── Chat ({len(history_msgs)} history msgs) | [USER] {preview}")
 
+        t0 = time.time()
         response = models.llm_paraphrase.create_chat_completion(
             messages=messages,
             temperature=0.7,
@@ -286,7 +288,7 @@ async def chat_with_llm(request: ChatRequest):
 
         ai_response = response['choices'][0]['message']['content'].strip()
         usage = response.get('usage', {})
-        logger.info(f"── tokens: {usage.get('prompt_tokens', '?')} in / {usage.get('completion_tokens', '?')} out ────────────────")
+        logger.info(f"── tokens: {usage.get('prompt_tokens', '?')} in / {usage.get('completion_tokens', '?')} out ──── {time.time() - t0:.1f}s")
 
         return ChatResponse(response=ai_response)
 
