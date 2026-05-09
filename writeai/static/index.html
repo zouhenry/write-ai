@@ -126,22 +126,21 @@
 
         <div id="chatSection" class="tab-content">
             <div class="tab-description">
-                <p>Chat with an AI assistant about writing, grammar, or any other topic. Your conversation history is
-                    saved automatically.</p>
+                <p>Chat with an AI assistant about writing, grammar, or any other topic.</p>
             </div>
-            <div class="chat-container">
-                <div id="chatHistory" class="chat-history">
-                    <div class="message ai-message">
-                        <div class="message-content">
-                            Hello! I'm your AI assistant. How can I help you today?
-                        </div>
-                    </div>
+            <div class="chat-layout">
+                <div id="chatSidebar">
+                    <button id="newChatBtn" onclick="startNewChat()">&#43; New Chat</button>
+                    <div id="conversationList"></div>
                 </div>
-                <div class="chat-input-area">
-                    <textarea id="chatInput"
-                        placeholder="Ask me anything... (e.g., 'Explain the difference between its and it's')"
-                        rows="3"></textarea>
-                    <button id="sendChatBtn" onclick="sendChatMessage()">Send</button>
+                <div class="chat-container">
+                    <div id="chatHistory" class="chat-history"></div>
+                    <div class="chat-input-area">
+                        <textarea id="chatInput"
+                            placeholder="Ask me anything... (e.g., 'Explain the difference between its and it\'s')"
+                            rows="3"></textarea>
+                        <button id="sendChatBtn" onclick="sendChatMessage()">Send</button>
+                    </div>
                 </div>
             </div>
         </div>
