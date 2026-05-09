@@ -1,4 +1,4 @@
-.PHONY: help run run-no-gpu run-sm run-md run-lg dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check
+.PHONY: help run run-no-gpu run-sm run-md run-lg dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check docker-pull docker-up docker-down docker-logs docker-build docker-restart
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python3
@@ -26,6 +26,7 @@ help:
 	@echo "  make build-wheel-cpu  - Build llama-cpp-python wheel without GPU support"
 	@echo ""
 	@echo "Docker Deployment:"
+	@echo "  make docker-pull      - Pull and run latest image from GitHub Container Registry"
 	@echo "  make docker-up        - Build and start Docker container"
 	@echo "  make docker-down      - Stop Docker container"
 	@echo "  make docker-logs      - View Docker container logs"
@@ -128,6 +129,9 @@ clean-venv:
 	rm -rf $(VENV)
 
 # Docker commands
+docker-pull:
+	docker pull ghcr.io/zouhenry/write-ai && docker run -p 8000:8000 ghcr.io/zouhenry/write-ai
+
 docker-up:
 	docker compose up -d --build
 
