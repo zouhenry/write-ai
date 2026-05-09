@@ -819,10 +819,11 @@ async def chat_with_llm(request: ChatRequest):
             # Only append if content is different, otherwise assume it's already in history
             messages.append({"role": "user", "content": message})
         
-        logger.info(f"── Chat request ({len(messages)} messages) ──────────────────")
-        for msg in messages:
-            prefix = f"[{msg['role'].upper()}]"
-            logger.info(f"{prefix} {msg['content']}")
+        history_msgs = messages[:-1]  # everything except the current user message
+        current_msg = messages[-1]['content']
+        words = current_msg.split()
+        preview = ' '.join(words[:100]) + ('...' if len(words) > 100 else '')
+        logger.info(f"── Chat ({len(history_msgs)} history msgs) | [USER] {preview}")
 
         response = llm_paraphrase.create_chat_completion(
             messages=messages,
