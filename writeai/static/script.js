@@ -801,6 +801,10 @@ function renderSidebar() {
     // implemented in Task 5
 }
 
+function startNewChat() {
+    // implemented in Task 5
+}
+
 function renderChatMessage(role, content, save = true) {
     const chatHistoryDiv = document.getElementById('chatHistory');
     const messageDiv = document.createElement('div');
