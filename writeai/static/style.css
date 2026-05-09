@@ -1433,9 +1433,35 @@ body.dark-mode .chat-input-area textarea {
 .ai-message .message-content pre {
   background: rgba(255, 255, 255, 0.07);
   padding: 10px;
+  padding-top: 32px;
   border-radius: 6px;
   overflow-x: auto;
   margin: 8px 0;
+}
+
+.code-copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid var(--gray-300);
+    background: var(--gray-100);
+    color: var(--gray-600);
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.code-copy-btn:hover {
+    opacity: 1;
+}
+
+body.dark-mode .code-copy-btn {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
 }
 
 .ai-message .message-content pre code {
@@ -1475,13 +1501,22 @@ body.dark-mode .chat-input-area textarea {
 }
 
 .ai-message .message-content strong {
-  color: #e2e8f0;
+  color: inherit;
 }
 
 .ai-message .message-content blockquote {
-  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  border-left: 3px solid var(--gray-400);
   padding-left: 10px;
   margin: 6px 0;
+  color: var(--gray-600);
+}
+
+body.dark-mode .ai-message .message-content strong {
+  color: #e2e8f0;
+}
+
+body.dark-mode .ai-message .message-content blockquote {
+  border-left-color: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.65);
 }
 

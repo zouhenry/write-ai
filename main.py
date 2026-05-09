@@ -257,7 +257,7 @@ async def chat_with_llm(request: ChatRequest):
             return ChatResponse(response="Please provide a message.")
 
         messages = [
-            {"role": "system", "content": "You are a helpful and intelligent AI assistant. Answer the user's questions clearly and concisely."}
+            {"role": "system", "content": "You are a helpful and intelligent AI assistant. Be concise: give short, direct answers by default. Only provide detailed explanations if the user explicitly asks for more detail, a full explanation, or a step-by-step breakdown."}
         ]
 
         for msg in request.history:
@@ -273,11 +273,11 @@ async def chat_with_llm(request: ChatRequest):
 
         history_msgs = messages[:-1]
         words = message.split()
-        preview = ' '.join(words[:100]) + ('...' if len(words) > 100 else '')
+        preview = ' '.join(words[:10]) + ('...' if len(words) > 10 else '')
         logger.info(f"── Chat ({len(history_msgs)} history msgs) | [USER] {preview}")
 
         t0 = time.time()
-        response = models.llm_paraphrase.create_chat_completion(
+        response = models.llm.create_chat_completion(
             messages=messages,
             temperature=0.7,
             top_p=0.95,
@@ -304,8 +304,10 @@ async def restructure_text(request: RestructureRequest):
         if not text:
             return RestructureResponse(original=text, corrected=text, formal=text, casual=text, concise=text)
 
-        logger.info(f"Restructuring text: '{text}'")
-
+        words = text.split()
+        preview = ' '.join(words[:10]) + ('...' if len(words) > 10 else '')
+        logger.info(f"── Restructure | {preview}")
+        t0 = time.time()
         response_correct = models.llm.create_chat_completion(
             messages=[
                 {"role": "system", "content": "You are a grammar correction assistant. Correct the grammar, punctuation, capitalization, and spacing in the text below. Preserve ALL original formatting elements including emojis, lists (bullets/numbering), special characters, and intentional line breaks. Return ONLY the revised text—no explanations or commentary."},
@@ -320,7 +322,7 @@ async def restructure_text(request: RestructureRequest):
         corrected = clean_corrected_text(response_correct['choices'][0]['message']['content'].strip(), text)
         highlighted_original, highlighted_corrected = highlight_word_differences(text, corrected)
 
-        response_paraphrase = models.llm_paraphrase.create_chat_completion(
+        response_paraphrase = models.llm.create_chat_completion(
             messages=[
                 {"role": "system", "content": (
                     "You are a text rewriter. Rewrite the input text in three tones and return ONLY a JSON object "
@@ -328,7 +330,7 @@ async def restructure_text(request: RestructureRequest):
                     "No explanations, no extra keys, no markdown fences — just the JSON object.\n"
                     "Example output: {\"formal\": \"...\", \"casual\": \"...\", \"concise\": \"...\"}"
                 )},
-                {"role": "user", "content": "paraphrase this" + corrected}
+                {"role": "user", "content": corrected}
             ],
             temperature=0.5,
             top_p=0.95,
@@ -348,9 +350,7 @@ async def restructure_text(request: RestructureRequest):
         except (json.JSONDecodeError, AttributeError):
             logger.warning(f"Paraphrase JSON parse failed, falling back. Raw: '{raw}'")
 
-        logger.info(f"Corrected: '{corrected}'")
-        logger.info(f"Paraphrase tones — formal: '{formal}' | casual: '{casual}' | concise: '{concise}'")
-
+        logger.info(f"── Restructure done in {time.time() - t0:.1f}s")
         return RestructureResponse(
             original=text,
             corrected=corrected,
@@ -370,10 +370,8 @@ async def restructure_text(request: RestructureRequest):
 async def health_check():
     return {
         "status": "healthy",
-        "grmr_loaded": models.llm is not None,
-        "qwen_loaded": models.llm_paraphrase is not None,
-        "grmr_backend": os.getenv("GRMR_API_BASE", "local"),
-        "qwen_backend": os.getenv("QWEN_API_BASE", "local"),
+        "model_loaded": models.llm is not None,
+        "backend": os.getenv("GEMMA_API_BASE", "local"),
     }
 
 
