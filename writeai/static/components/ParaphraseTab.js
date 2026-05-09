@@ -1,5 +1,14 @@
-import { ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import { ref, computed } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { copyToClipboard } from '../utils/clipboard.js';
+
+function escapeHtml(unsafe) {
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function showToast(message, isError = false) {
   const toast = document.createElement('div');
@@ -19,7 +28,7 @@ export default {
     const rephraseData = ref(null);
     const loading      = ref(false);
 
-    function results() {
+    const results = computed(() => {
       if (!rephraseData.value) return [];
       return [
         { label: 'Corrected', badge: 'Grammar Fixed', value: rephraseData.value.corrected,  isDiff: true  },
@@ -27,7 +36,7 @@ export default {
         { label: 'Casual',    badge: 'Casual',        value: rephraseData.value.casual,     isDiff: false },
         { label: 'Concise',   badge: 'Concise',       value: rephraseData.value.concise,    isDiff: false },
       ];
-    }
+    });
 
     async function rephraseText() {
       const text = inputText.value.trim();
@@ -58,7 +67,7 @@ export default {
       copyToClipboard(value, e.currentTarget);
     }
 
-    return { inputText, rephraseData, loading, results, rephraseText, clearText, copyResult };
+    return { inputText, rephraseData, loading, results, rephraseText, clearText, copyResult, escapeHtml };
   },
   template: `
     <div class="tab-content active">
@@ -88,8 +97,8 @@ export default {
             <template v-if="loading">
               <div class="empty-state"><p>Restructuring...</p></div>
             </template>
-            <template v-else-if="results().length > 0">
-              <div v-for="result in results()" :key="result.label" class="structure-result-item">
+            <template v-else-if="results.length > 0">
+              <div v-for="result in results" :key="result.label" class="structure-result-item">
                 <div class="structure-result-header">
                   <div class="result-label">
                     <span class="result-badge">{{ result.badge }}</span>
@@ -100,11 +109,11 @@ export default {
                   <div class="diff-view">
                     <div class="original-text">
                       <strong>Original:</strong>
-                      <span v-html="rephraseData.corrected_highlighted_original || rephraseData.original"></span>
+                      <span v-html="rephraseData.corrected_highlighted_original || escapeHtml(rephraseData.original)"></span>
                     </div>
                     <div class="corrected-text-suggestion">
                       <strong>Suggested:</strong>
-                      <span v-html="rephraseData.corrected_highlighted_corrected || result.value"></span>
+                      <span v-html="rephraseData.corrected_highlighted_corrected || escapeHtml(result.value)"></span>
                     </div>
                   </div>
                 </template>

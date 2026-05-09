@@ -1,4 +1,4 @@
-import { ref, reactive } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+import { ref, reactive, computed } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { copyToClipboard } from '../utils/clipboard.js';
 
 function escapeHtml(unsafe) {
@@ -52,11 +52,11 @@ export default {
     const isApplyingSuggestion = ref(false);
     const textareaRef        = ref(null);
 
-    function unappliedSuggestions() {
-      return corrections.suggestions
+    const unappliedSuggestions = computed(() =>
+      corrections.suggestions
         .map((s, i) => ({ ...s, globalIndex: i }))
-        .filter((s) => !appliedSuggestions.value.has(s.globalIndex));
-    }
+        .filter((s) => !appliedSuggestions.value.has(s.globalIndex))
+    );
 
     async function correctText() {
       const text = inputText.value.trim();
@@ -71,7 +71,7 @@ export default {
         if (!res.ok) throw new Error('Server error: ' + res.status);
         const data = await res.json();
         corrections.suggestions   = data.suggestions || [];
-        corrections.correctedText = data.correctedText || '';
+        corrections.correctedText = data.corrected_text || '';
         appliedSuggestions.value  = new Set();
       } catch (err) {
         console.error(err);
@@ -194,15 +194,15 @@ export default {
         <div class="suggestions-section">
           <div class="suggestions-header">
             <h2>Suggestions</h2>
-            <span class="count-badge">{{ unappliedSuggestions().length }}</span>
+            <span class="count-badge">{{ unappliedSuggestions.length }}</span>
           </div>
           <div class="suggestions-list">
             <template v-if="loading">
               <div class="empty-state"><p>Checking grammar...</p></div>
             </template>
-            <template v-else-if="unappliedSuggestions().length > 0">
+            <template v-else-if="unappliedSuggestions.length > 0">
               <div
-                v-for="sug in unappliedSuggestions()"
+                v-for="sug in unappliedSuggestions"
                 :key="sug.globalIndex"
                 class="suggestion-item"
                 @mouseenter="onSuggestionHover(sug)"
