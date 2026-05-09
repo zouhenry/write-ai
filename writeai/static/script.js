@@ -880,6 +880,27 @@ function deleteConversation(id) {
     renderSidebar();
 }
 
+async function generateConversationTitle(firstUserMessage, firstAiResponse) {
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: 'Summarize this conversation topic in 6 words or fewer.',
+                history: [
+                    { role: 'user', content: firstUserMessage },
+                    { role: 'assistant', content: firstAiResponse }
+                ]
+            })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.response ? data.response.trim().replace(/['"]/g, '') : null;
+    } catch {
+        return null;
+    }
+}
+
 function renderChatMessage(role, content, save = true) {
     const chatHistoryDiv = document.getElementById('chatHistory');
     const messageDiv = document.createElement('div');
@@ -1086,6 +1107,30 @@ async function sendChatMessage() {
         
         // Render AI message
         renderChatMessage('assistant', data.response);
+
+        // Generate title after first exchange
+        const isFirstExchange = chatHistory.filter(m => m.role === 'user').length === 1;
+        if (isFirstExchange) {
+            // Set placeholder title immediately using first 40 chars of user message
+            const conversations = loadConversations();
+            const idx = conversations.findIndex(c => c.id === activeConversationId);
+            if (idx !== -1 && conversations[idx].title === 'New conversation') {
+                conversations[idx].title = message.slice(0, 40);
+                saveConversations(conversations);
+                renderSidebar();
+            }
+            // Generate real title in background — no await
+            generateConversationTitle(message, data.response).then(title => {
+                if (!title) return;
+                const convs = loadConversations();
+                const i = convs.findIndex(c => c.id === activeConversationId);
+                if (i !== -1) {
+                    convs[i].title = title;
+                    saveConversations(convs);
+                    renderSidebar();
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Error:', error);
