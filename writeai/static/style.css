@@ -1496,17 +1496,17 @@ body.dark-mode .chat-input-area textarea {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 1000;
-  animation: slideIn 0.3s ease;
+  animation: toastSlideIn 0.3s ease;
 }
 .toast.toast-error {
   background: #e53e3e;
 }
 
-@keyframes slideIn {
+@keyframes toastSlideIn {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
-@keyframes slideOut {
+@keyframes toastSlideOut {
   from { transform: translateX(0);    opacity: 1; }
   to   { transform: translateX(100%); opacity: 0; }
 }

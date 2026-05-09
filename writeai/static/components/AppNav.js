@@ -9,8 +9,9 @@ export default {
     const isDark      = inject('isDark');
     const toggleTheme = inject('toggleTheme');
     const isInstalled = inject('isInstalled');
+    const canInstall  = inject('canInstall');
     const install     = inject('install');
-    return { activeTab, setTab, isOffline, isDark, toggleTheme, isInstalled, install };
+    return { activeTab, setTab, isOffline, isDark, toggleTheme, isInstalled, canInstall, install };
   },
   template: `
     <div>
@@ -21,7 +22,7 @@ export default {
       >{{ isDark ? '🌙' : '☀️' }}</div>
 
       <button
-        v-if="!isInstalled"
+        v-if="canInstall && !isInstalled"
         id="installBtn"
         class="install-btn"
         title="Install WriteAI as a desktop app"

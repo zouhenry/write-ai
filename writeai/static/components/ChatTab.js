@@ -26,10 +26,11 @@ export default {
     }
 
     function deleteConversation(id) {
-      let convs = conversations.value.filter((c) => c.id !== id);
+      const convs = conversations.value.filter((c) => c.id !== id);
       if (id === activeConversationId.value) {
         if (convs.length === 0) {
-          // no conversations left — newChat() will save and update conversations.value
+          // Commit the deletion first so newChat() starts from a clean state.
+          conversations.value = convs;
           newChat();
           return;
         }

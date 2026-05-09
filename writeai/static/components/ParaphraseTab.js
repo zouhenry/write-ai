@@ -16,7 +16,7 @@ function showToast(message, isError = false) {
   toast.className = 'toast' + (isError ? ' toast-error' : '');
   document.body.appendChild(toast);
   setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease';
+    toast.style.animation = 'toastSlideOut 0.3s ease';
     setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
   }, 3000);
 }
@@ -67,7 +67,11 @@ export default {
       copyToClipboard(value, e.currentTarget);
     }
 
-    return { inputText, rephraseData, loading, results, rephraseText, clearText, copyResult, escapeHtml };
+    function sanitize(html) {
+      return window.DOMPurify.sanitize(html);
+    }
+
+    return { inputText, rephraseData, loading, results, rephraseText, clearText, copyResult, escapeHtml, sanitize };
   },
   template: `
     <div class="tab-content active">
@@ -109,11 +113,11 @@ export default {
                   <div class="diff-view">
                     <div class="original-text">
                       <strong>Original:</strong>
-                      <span v-html="rephraseData.corrected_highlighted_original || escapeHtml(rephraseData.original)"></span>
+                      <span v-html="rephraseData.corrected_highlighted_original ? sanitize(rephraseData.corrected_highlighted_original) : escapeHtml(rephraseData.original)"></span>
                     </div>
                     <div class="corrected-text-suggestion">
                       <strong>Suggested:</strong>
-                      <span v-html="rephraseData.corrected_highlighted_corrected || escapeHtml(result.value)"></span>
+                      <span v-html="rephraseData.corrected_highlighted_corrected ? sanitize(rephraseData.corrected_highlighted_corrected) : escapeHtml(result.value)"></span>
                     </div>
                   </div>
                 </template>

@@ -16,7 +16,7 @@ function showToast(message, isError = false) {
   toast.className = 'toast' + (isError ? ' toast-error' : '');
   document.body.appendChild(toast);
   setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease';
+    toast.style.animation = 'toastSlideOut 0.3s ease';
     setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
   }, 3000);
 }
@@ -151,10 +151,14 @@ export default {
       copyToClipboard(inputText.value, e.currentTarget);
     }
 
+    function sanitize(html) {
+      return window.DOMPurify.sanitize(html);
+    }
+
     return {
       inputText, corrections, loading, textareaRef,
       unappliedSuggestions, correctText, applySingleSuggestion, clearText,
-      onKeydown, updateCaret, onSuggestionHover, onSuggestionLeave, copyInput, escapeHtml,
+      onKeydown, updateCaret, onSuggestionHover, onSuggestionLeave, copyInput, escapeHtml, sanitize,
     };
   },
   template: `
@@ -216,11 +220,11 @@ export default {
                 </div>
                 <div class="original-text">
                   <strong>Original:</strong>
-                  <span v-html="sug.original_highlighted || escapeHtml(sug.original)"></span>
+                  <span v-html="sug.original_highlighted ? sanitize(sug.original_highlighted) : escapeHtml(sug.original)"></span>
                 </div>
                 <div class="corrected-text-suggestion">
                   <strong>Suggested:</strong>
-                  <span v-html="sug.corrected_highlighted || escapeHtml(sug.corrected)"></span>
+                  <span v-html="sug.corrected_highlighted ? sanitize(sug.corrected_highlighted) : escapeHtml(sug.corrected)"></span>
                 </div>
               </div>
             </template>
