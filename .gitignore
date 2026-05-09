@@ -175,3 +175,6 @@ electron-app/
 chrome-extension/
 .claude/
 electron-app/node_modules/
+
+# Superpowers brainstorm session artifacts (runtime only, not design docs)
+.superpowers/
