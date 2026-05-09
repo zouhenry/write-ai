@@ -1,3 +1,18 @@
+async function checkApiStatus() {
+    try {
+        const res = await fetch('/health', { method: 'GET' });
+        setStatusBanner(!res.ok);
+    } catch {
+        setStatusBanner(true);
+    }
+}
+
+function setStatusBanner(offline) {
+    document.getElementById('statusBanner').style.display = offline ? 'flex' : 'none';
+}
+
+marked.use({ breaks: true });
+
 let currentCorrections = {
     suggestions: [],
     correctedText: ''
@@ -695,7 +710,11 @@ function renderChatMessage(role, content, save = true) {
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = content;
+    if (role === 'assistant') {
+        contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(content));
+    } else {
+        contentDiv.textContent = content;
+    }
 
     messageDiv.appendChild(contentDiv);
     chatHistoryDiv.appendChild(messageDiv);
@@ -912,6 +931,13 @@ window.addEventListener('DOMContentLoaded', () => {
     // Restore the last active tab
     const savedTab = localStorage.getItem('activeTab');
     switchTab(savedTab || 'paraphrase');
+
+    // API status: check on load and whenever the page regains focus
+    checkApiStatus();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkApiStatus();
+    });
+    window.addEventListener('focus', checkApiStatus);
 });
 
 // PWA: service worker registration

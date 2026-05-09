@@ -1228,3 +1228,92 @@ body.dark-mode .chat-input-area textarea {
         font-size: 1.1rem;
     }
 }
+
+/* ── API Status Banner ──────────────────────────────────── */
+.status-banner {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(229, 62, 62, 0.15);
+    border-bottom: 1px solid rgba(229, 62, 62, 0.3);
+    color: #fc8181;
+    font-size: 13px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fc8181;
+    flex-shrink: 0;
+    animation: pulse-red 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+/* ── Chat markdown rendering ────────────────────────────── */
+.ai-message .message-content code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.ai-message .message-content pre {
+    background: rgba(255, 255, 255, 0.07);
+    padding: 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.ai-message .message-content pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+}
+
+.ai-message .message-content ul,
+.ai-message .message-content ol {
+    margin: 6px 0 6px 20px;
+    padding: 0;
+}
+
+.ai-message .message-content li {
+    margin-bottom: 3px;
+}
+
+.ai-message .message-content h1,
+.ai-message .message-content h2,
+.ai-message .message-content h3 {
+    margin: 10px 0 4px;
+    font-size: 1em;
+    font-weight: 700;
+}
+
+.ai-message .message-content p {
+    margin: 4px 0;
+}
+
+.ai-message .message-content p:first-child {
+    margin-top: 0;
+}
+
+.ai-message .message-content p:last-child {
+    margin-bottom: 0;
+}
+
+.ai-message .message-content strong {
+    color: #e2e8f0;
+}
+
+.ai-message .message-content blockquote {
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    padding-left: 10px;
+    margin: 6px 0;
+    color: rgba(255, 255, 255, 0.65);
+}
