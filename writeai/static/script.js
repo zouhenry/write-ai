@@ -747,6 +747,60 @@ function migrateOldHistory() {
     localStorage.removeItem('grammarLlmChatHistory');
 }
 
+function initConversations() {
+    migrateOldHistory();
+    let conversations = loadConversations();
+
+    if (conversations.length === 0) {
+        // First run — create an empty default conversation
+        const first = {
+            id: generateId(),
+            title: 'New conversation',
+            createdAt: Date.now(),
+            messages: []
+        };
+        conversations = [first];
+        saveConversations(conversations);
+    }
+
+    // Set active to the most recent
+    conversations.sort((a, b) => b.createdAt - a.createdAt);
+    activeConversationId = localStorage.getItem('grammarLlmActiveConversationId') || conversations[0].id;
+
+    // Validate stored active ID still exists
+    if (!conversations.find(c => c.id === activeConversationId)) {
+        activeConversationId = conversations[0].id;
+    }
+    localStorage.setItem('grammarLlmActiveConversationId', activeConversationId);
+
+    const active = conversations.find(c => c.id === activeConversationId);
+    chatHistory = active ? [...active.messages] : [];
+
+    renderChatHistoryView();
+    renderSidebar();
+}
+
+function renderChatHistoryView() {
+    const chatHistoryDiv = document.getElementById('chatHistory');
+    chatHistoryDiv.textContent = ''; // safe clear
+    if (chatHistory.length === 0) {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'message ai-message';
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.textContent = "Hello! I'm your AI assistant. How can I help you today?";
+        welcomeDiv.appendChild(contentDiv);
+        chatHistoryDiv.appendChild(welcomeDiv);
+        return;
+    }
+    chatHistory.forEach(msg => renderChatMessage(msg.role, msg.content, false));
+    scrollToBottom();
+}
+
+function renderSidebar() {
+    // implemented in Task 5
+}
+
 function renderChatMessage(role, content, save = true) {
     const chatHistoryDiv = document.getElementById('chatHistory');
     const messageDiv = document.createElement('div');
@@ -970,7 +1024,7 @@ document.getElementById('chatInput').addEventListener('keydown', function(e) {
 
 // Load history on start
 window.addEventListener('DOMContentLoaded', () => {
-    loadChatHistory();
+    initConversations();
 
     // Restore the last active tab
     const savedTab = localStorage.getItem('activeTab');
