@@ -73,6 +73,12 @@ The sidebar is only visible when the chat tab is active (already scoped by the t
   - Switch to the most recent remaining conversation, OR
   - If none remain, create a fresh empty conversation and set it active
 
+## Storage Cap
+
+Conversations are capped at **50**. When saving after creating a new conversation, if `grammarLlmConversations` exceeds 50 entries, remove the oldest (by `createdAt`) until the count is 50. This keeps localStorage usage bounded without user intervention.
+
+Additionally, wrap all localStorage writes in a `try/catch` for `QuotaExceededError` and show a toast ("Storage full — oldest conversations removed") if the cap alone isn't enough.
+
 ## Files Changed
 
 - `writeai/static/index.html` — add `#chatSidebar` div inside `#chatSection`
