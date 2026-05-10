@@ -4,9 +4,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - GEMMA_QUANT=sm  # sm (~2.4GB, default), md (~3.2GB), lg (~4.2GB)
+      - MODEL_SIZE=sm  # sm (~2.4GB, default), md (~3.2GB), lg (~4.2GB)
       # - NO_GPU=1      # uncomment for CPU-only
-      # - GEMMA_API_BASE=http://host:8080  # uncomment to use a remote llama.cpp server
+      # - LLM_API_BASE=http://host:1234   # point to LM Studio or any OpenAI-compatible server
+      # - LLM_MODEL_NAME=local-model      # model name reported by that server
     volumes:
       - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub
       - ./writeai/static:/app/writeai/static

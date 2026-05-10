@@ -1,4 +1,4 @@
-.PHONY: help run run-no-gpu run-sm run-md run-lg dev dev-no-gpu install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check docker-pull docker-up docker-down docker-logs docker-build docker-restart
+.PHONY: help run run-no-gpu run-sm run-md run-lg dev dev-sm dev-md dev-lg dev-no-gpu dev-lm-studio install install-compile build-wheel-gpu build-wheel-cpu lint format format-ui clean clean-venv health check docker-pull docker-up docker-down docker-logs docker-build docker-restart
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python3
@@ -11,8 +11,12 @@ help:
 	@echo "Local Development:"
 	@echo "  make install          - Install dependencies (uses pre-built wheel if compatible)"
 	@echo "  make install-compile  - Compile llama-cpp-python from source with Metal/GPU support"
-	@echo "  make dev              - Run with auto-reload (development, GPU)"
+	@echo "  make dev              - Run with auto-reload (development, GPU, default size)"
+	@echo "  make dev-sm           - Run with auto-reload, small model (~2.4GB)"
+	@echo "  make dev-md           - Run with auto-reload, medium model (~3.2GB)"
+	@echo "  make dev-lg           - Run with auto-reload, large model (~4.2GB)"
 	@echo "  make dev-no-gpu       - Run with auto-reload (development, CPU only)"
+	@echo "  make dev-lm-studio    - Run with auto-reload, using LM Studio at localhost:1234"
 	@echo "  make run              - Run the FastAPI server (production, GPU, default quant)"
 	@echo "  make run-sm           - Run with small model (~2.4GB)"
 	@echo "  make run-md           - Run with medium model (~3.2GB)"
@@ -67,13 +71,13 @@ run: $(VENV)/bin/activate
 	$(PYTHON) main.py
 
 run-sm: $(VENV)/bin/activate
-	GEMMA_QUANT=sm $(PYTHON) main.py
+	MODEL_SIZE=sm $(PYTHON) main.py
 
 run-md: $(VENV)/bin/activate
-	GEMMA_QUANT=md $(PYTHON) main.py
+	MODEL_SIZE=md $(PYTHON) main.py
 
 run-lg: $(VENV)/bin/activate
-	GEMMA_QUANT=lg $(PYTHON) main.py
+	MODEL_SIZE=lg $(PYTHON) main.py
 
 run-no-gpu: $(VENV)/bin/activate
 	NO_GPU=1 $(PYTHON) main.py
@@ -81,8 +85,20 @@ run-no-gpu: $(VENV)/bin/activate
 dev: $(VENV)/bin/activate
 	$(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
+dev-sm: $(VENV)/bin/activate
+	MODEL_SIZE=sm $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+dev-md: $(VENV)/bin/activate
+	MODEL_SIZE=md $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+dev-lg: $(VENV)/bin/activate
+	MODEL_SIZE=lg $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
 dev-no-gpu: $(VENV)/bin/activate
 	NO_GPU=1 $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+dev-lm-studio: $(VENV)/bin/activate
+	LLM_API_BASE=http://localhost:1234 LLM_MODEL_NAME=local-model $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 check:
 	@echo "=== WriteAI Environment Check ==="
