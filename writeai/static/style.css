@@ -219,6 +219,9 @@ body.dark-mode .theme-toggle:hover {
   padding: var(--space-xl);
   flex: 1;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Tab Description */
@@ -257,9 +260,12 @@ body.dark-mode .tab-description p {
   display: block;
 }
 
-#chatSection.active {
+#chatSection.active,
+.chat-tab-content {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 @keyframes fadeIn {
@@ -1132,11 +1138,10 @@ body.dark-mode .conversation-item.active {
   border: 1px solid var(--gray-200);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 280px);
-  max-height: 70vh;
-  transition: all 0.3s ease;
   flex: 1;
+  min-height: 0;
   min-width: 0;
+  transition: all 0.3s ease;
 }
 
 .chat-container:hover {
@@ -1264,6 +1269,17 @@ body.dark-mode .chat-input-area textarea {
 #sendChatBtn:hover {
   background: var(--primary-dark);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+#stopChatBtn {
+  background: var(--gray-400, #9ca3af);
+  color: white;
+  align-self: flex-end;
+  padding: 0.625rem 1.5rem;
+}
+
+#stopChatBtn:hover {
+  background: var(--gray-500, #6b7280);
 }
 
 /* Responsive design */

@@ -146,6 +146,7 @@ make install-compile    # Compile llama-cpp-python from source (Metal/GPU)
 make check              # Verify environment is set up correctly
 make dev                # Development server (GPU)
 make dev-no-gpu         # Development server (CPU only)
+make dev-lm-studio      # Development server, proxying to LM Studio at localhost:1234
 make run                # Production server (GPU)
 make run-no-gpu         # Production server (CPU only)
 make docker-up          # Docker deployment
@@ -224,12 +225,14 @@ curl http://localhost:8000/health
 
 ## Models
 
-A single [Gemma-4-E2B](https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF) model handles all tasks (grammar, paraphrase, chat), run via llama.cpp (2048 ctx) with GPU acceleration or CPU-only with `NO_GPU=1`.
+A single [Gemma-4-E2B](https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF) model handles all tasks (grammar, paraphrase, chat), run via llama.cpp with GPU acceleration or CPU-only with `NO_GPU=1`.
 
-Select a model size with the `GEMMA_QUANT` env var (default: `sm`):
+### Local model size
 
-| `GEMMA_QUANT` | Size | Notes |
-|---------------|------|-------|
+Select a model size with the `MODEL_SIZE` env var (default: `sm`):
+
+| `MODEL_SIZE` | Size | Notes |
+|--------------|------|-------|
 | `sm` | ~2.4GB | Default, good for low-memory systems |
 | `md` | ~3.2GB | Better quality/size balance |
 | `lg` | ~4.2GB | Higher quality, more RAM required |
@@ -241,8 +244,25 @@ make run-sm   # or run-md, run-lg
 For Docker, edit the `environment` section in `docker-compose.yml`:
 ```yaml
 environment:
-  - GEMMA_QUANT=sm  # or md, lg
+  - MODEL_SIZE=sm  # or md, lg
 ```
+
+### External LLM server (LM Studio, llama.cpp server, Ollama, etc.)
+
+Point WriteAI at any OpenAI-compatible server by setting `LLM_API_BASE`. No local model will be downloaded.
+
+```bash
+# Development (auto-reload), LM Studio default port
+make dev-lm-studio
+
+# Or set vars manually for any server
+LLM_API_BASE=http://localhost:11434 LLM_MODEL_NAME=llama3 make dev
+```
+
+| Variable | Description |
+|----------|-------------|
+| `LLM_API_BASE` | Base URL of the server (e.g. `http://localhost:1234`) |
+| `LLM_MODEL_NAME` | Model name to pass in requests (default: `model`) |
 
 **Model cache location:** `~/.cache/huggingface/hub/` — downloaded automatically on first run. In Docker, this directory is bind-mounted from the host so models are never re-downloaded across container rebuilds.
 

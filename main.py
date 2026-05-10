@@ -12,10 +12,10 @@ import logging
 from pathlib import Path
 from typing import List, Dict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 import models
@@ -281,7 +281,7 @@ async def chat_with_llm(request: ChatRequest):
             messages=messages,
             temperature=0.7,
             top_p=0.95,
-            top_k=40,
+            top_k=65,
             max_tokens=4098,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>", "User:", "Assistant:"]
         )
@@ -295,6 +295,75 @@ async def chat_with_llm(request: ChatRequest):
     except Exception as e:
         logger.error(f"Error processing chat request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest, http_request: Request):
+    message = request.message.strip()
+    if not message:
+        return StreamingResponse(iter([]), media_type="text/event-stream")
+
+    messages = [
+        {"role": "system", "content": "You are a helpful and intelligent AI assistant. Be concise: give short, direct answers by default. Only provide detailed explanations if the user explicitly asks for more detail, a full explanation, or a step-by-step breakdown."}
+    ]
+    for msg in request.history:
+        if msg['role'] == 'system':
+            continue
+        role = 'assistant' if msg['role'] in ('ai', 'assistant') else 'user'
+        messages.append({"role": role, "content": msg['content']})
+    if not messages or messages[-1]['role'] == 'assistant':
+        messages.append({"role": "user", "content": message})
+    elif messages[-1]['role'] == 'user' and messages[-1]['content'] != message:
+        messages.append({"role": "user", "content": message})
+
+    words = message.split()
+    preview = ' '.join(words[:10]) + ('...' if len(words) > 10 else '')
+    logger.info(f"── Chat/stream ({len(messages) - 1} history msgs) | [USER] {preview}")
+
+    kwargs = dict(temperature=0.7, top_p=0.95, top_k=65, max_tokens=4098,
+                  stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>", "User:", "Assistant:"])
+
+    async def generate():
+        try:
+            if hasattr(models.llm, 'create_chat_completion_stream'):
+                # Remote model: parse upstream SSE and re-emit normalised tokens
+                async for line in models.llm.create_chat_completion_stream(messages, **kwargs):
+                    if await http_request.is_disconnected():
+                        break
+                    if not line.startswith("data: "):
+                        continue
+                    payload = line[6:]
+                    if payload.strip() == "[DONE]":
+                        yield "data: [DONE]\n\n"
+                        break
+                    try:
+                        chunk = json.loads(payload)
+                        token = chunk['choices'][0].get('delta', {}).get('content', '')
+                        if token:
+                            yield f"data: {json.dumps({'token': token})}\n\n"
+                    except (KeyError, json.JSONDecodeError):
+                        pass
+            else:
+                # Local llama-cpp-python
+                import asyncio
+                loop = asyncio.get_event_loop()
+                stream = await loop.run_in_executor(
+                    None,
+                    lambda: models.llm.create_chat_completion(messages, stream=True, **kwargs),
+                )
+                for chunk in stream:
+                    if await http_request.is_disconnected():
+                        break
+                    token = chunk['choices'][0].get('delta', {}).get('content', '')
+                    if token:
+                        yield f"data: {json.dumps({'token': token})}\n\n"
+                yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/restructure", response_model=RestructureResponse)
@@ -315,7 +384,7 @@ async def restructure_text(request: RestructureRequest):
             ],
             temperature=0.3,
             top_p=0.95,
-            top_k=40,
+            top_k=65,
             max_tokens=len(text) + 256,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
         )
@@ -334,7 +403,7 @@ async def restructure_text(request: RestructureRequest):
             ],
             temperature=0.5,
             top_p=0.95,
-            top_k=40,
+            top_k=65,
             max_tokens=len(corrected) * 4 + 64,
             stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"]
         )
@@ -371,7 +440,7 @@ async def health_check():
     return {
         "status": "healthy",
         "model_loaded": models.llm is not None,
-        "backend": os.getenv("GEMMA_API_BASE", "local"),
+        "backend": os.getenv("LLM_API_BASE", "local"),
     }
 
 

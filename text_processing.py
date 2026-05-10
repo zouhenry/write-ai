@@ -320,7 +320,7 @@ def correct_sentence(sentence: str, llm) -> str:
             messages=messages,
             temperature=0.3,
             top_p=0.95,
-            top_k=40,
+            top_k=65,
             min_p=0.01,
             frequency_penalty=0.0,
             presence_penalty=0.0,

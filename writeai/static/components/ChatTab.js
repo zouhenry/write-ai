@@ -80,7 +80,7 @@ export default {
     };
   },
   template: `
-    <div class="tab-content active">
+    <div class="tab-content active chat-tab-content">
       <div class="tab-description">
         <p>Chat with an AI assistant about writing, grammar, or any other topic.</p>
       </div>
