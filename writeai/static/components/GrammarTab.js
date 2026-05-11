@@ -2,7 +2,10 @@ import {
   ref,
   reactive,
   computed,
+  onMounted,
 } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+
+const BANNER_KEY = 'banner_dismissed_grammar';
 import { copyToClipboard } from '../utils/clipboard.js';
 
 function escapeHtml(unsafe) {
@@ -60,6 +63,16 @@ export default {
     const lastCaretPosition = ref(0);
     const isApplyingSuggestion = ref(false);
     const textareaRef = ref(null);
+    const bannerVisible = ref(false);
+
+    onMounted(() => {
+      bannerVisible.value = !localStorage.getItem(BANNER_KEY);
+    });
+
+    function dismissBanner() {
+      bannerVisible.value = false;
+      localStorage.setItem(BANNER_KEY, '1');
+    }
 
     const unappliedSuggestions = computed(() =>
       corrections.suggestions
@@ -185,6 +198,8 @@ export default {
       loading,
       textareaRef,
       unappliedSuggestions,
+      bannerVisible,
+      dismissBanner,
       correctText,
       applySingleSuggestion,
       clearText,
@@ -199,8 +214,9 @@ export default {
   },
   template: `
     <div class="tab-content active">
-      <div class="tab-description">
+      <div v-if="bannerVisible" class="tab-description">
         <p>Check your text for grammar, spelling, and punctuation errors. Get instant suggestions to improve your writing.</p>
+        <button class="banner-dismiss" @click="dismissBanner" aria-label="Dismiss">&#x2715;</button>
       </div>
       <div class="main-content">
         <div class="text-editor-section">
