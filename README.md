@@ -42,6 +42,16 @@ brew install uv
 uvx --from git+https://github.com/zouhenry/write-ai.git write-ai
 ```
 
+**Select model size** (`sm` default, `md`, or `lg`):
+```bash
+MODEL_SIZE=lg uvx --from git+https://github.com/zouhenry/write-ai.git write-ai
+```
+
+**Force update to latest version:**
+```bash
+uvx --refresh --from git+https://github.com/zouhenry/write-ai.git write-ai
+```
+
 Then open `http://localhost:8000`
 
 ---
@@ -62,6 +72,16 @@ pip install pipx
 **Run:**
 ```bash
 pipx run --spec git+https://github.com/zouhenry/write-ai.git write-ai
+```
+
+**Select model size** (`sm` default, `md`, or `lg`):
+```bash
+MODEL_SIZE=md pipx run --spec git+https://github.com/zouhenry/write-ai.git write-ai
+```
+
+**Force update to latest version:**
+```bash
+pipx run --no-cache --spec git+https://github.com/zouhenry/write-ai.git write-ai
 ```
 
 Then open `http://localhost:8000`
