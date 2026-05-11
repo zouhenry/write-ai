@@ -21,7 +21,7 @@ dependencies = [
 write-ai = "main:run"
 
 [tool.setuptools]
-py-modules = ["main"]
+py-modules = ["main", "models", "text_processing"]
 packages = ["writeai"]
 
 [tool.setuptools.package-data]
