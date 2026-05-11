@@ -110,6 +110,13 @@ async def startup_event():
     models.initialize_model()
 
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    if models.llm is not None and hasattr(models.llm, "close"):
+        models.llm.close()
+    models.llm = None
+
+
 # ── Static routes ─────────────────────────────────────────────────────────────
 
 @app.get("/")

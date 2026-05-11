@@ -68,19 +68,19 @@ build-wheel-cpu: $(VENV)/bin/activate
 	@echo "✓ CPU wheel built in $(WHEELS_DIR)/"
 
 run: $(VENV)/bin/activate
-	$(PYTHON) main.py
+	$(PYTHON) -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 run-sm: $(VENV)/bin/activate
-	MODEL_SIZE=sm $(PYTHON) main.py
+	MODEL_SIZE=sm $(PYTHON) -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 run-md: $(VENV)/bin/activate
-	MODEL_SIZE=md $(PYTHON) main.py
+	MODEL_SIZE=md $(PYTHON) -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 run-lg: $(VENV)/bin/activate
-	MODEL_SIZE=lg $(PYTHON) main.py
+	MODEL_SIZE=lg $(PYTHON) -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 run-no-gpu: $(VENV)/bin/activate
-	NO_GPU=1 $(PYTHON) main.py
+	NO_GPU=1 $(PYTHON) -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 dev: $(VENV)/bin/activate
 	$(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
