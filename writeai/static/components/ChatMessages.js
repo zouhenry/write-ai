@@ -222,11 +222,23 @@ export default {
       });
     }
 
+    // collapsedMessages[i] === true means expanded; absent/false means collapsed (default)
+    const collapsedMessages = ref({});
+
+    function toggleCollapse(i) {
+      collapsedMessages.value = {
+        ...collapsedMessages.value,
+        [i]: !collapsedMessages.value[i],
+      };
+    }
+
     return {
       chatHistory,
       inputText,
       loading,
       chatAreaRef,
+      collapsedMessages,
+      toggleCollapse,
       sendChatMessage,
       stopChat,
       onKeydown,
@@ -249,7 +261,18 @@ export default {
               :class="msg.role === 'user' ? 'user-message' : 'ai-message'"
             >
               <div class="message-content" v-if="msg.role === 'assistant'" v-html="sanitize(msg.content)"></div>
-              <div class="message-content" v-else>{{ msg.content }}</div>
+              <div class="message-content user-prompt" v-else>
+                <button
+                  v-if="msg.content.split('\\n').length > 3"
+                  class="user-prompt-toggle"
+                  @click="toggleCollapse(i)"
+                  :aria-expanded="!!collapsedMessages[i]"
+                  :title="collapsedMessages[i] ? 'Collapse' : 'Expand'"
+                ><span class="user-prompt-chevron" :class="{ expanded: collapsedMessages[i] }">&#8964;</span></button>
+                <div class="user-prompt-body" :class="{ expanded: collapsedMessages[i] }">
+                  <pre class="user-prompt-pre">{{ msg.content }}</pre>
+                </div>
+              </div>
             </div>
           </template>
         </template>

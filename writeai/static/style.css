@@ -1212,6 +1212,69 @@ body.dark-mode .chat-container:hover {
   background: var(--primary);
   color: white;
   border-bottom-right-radius: var(--radius-sm);
+  position: relative;
+}
+
+.user-prompt {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-prompt-toggle {
+  position: absolute;
+  top: 0.35rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.25rem;
+  overflow: visible;
+  z-index: 1;
+}
+
+.user-prompt-toggle:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.user-prompt-chevron {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  transform: rotate(-90deg);
+  transition: transform 0.25s ease;
+}
+
+.user-prompt-chevron.expanded {
+  transform: rotate(0deg);
+}
+
+/* 3 lines collapsed: line-height 1.55 * 0.82rem * 3 ≈ 3.82rem + padding */
+.user-prompt-body {
+  max-height: calc(1.55 * 0.82rem * 3 + 1rem);
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.user-prompt-body.expanded {
+  max-height: 600px;
+}
+
+.user-prompt-pre {
+  margin: 0;
+  font-family:
+    ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-right: 1.5rem;
+  color: inherit;
 }
 
 .ai-message {
