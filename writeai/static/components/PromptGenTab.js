@@ -38,6 +38,7 @@ export default {
     const replyInput = ref('');
     const isLoading = ref(false);
     const conversationStarted = ref(false);
+    const threadRef = ref(null);
 
     onMounted(() => {
       bannerVisible.value = !localStorage.getItem(BANNER_KEY);
@@ -129,8 +130,7 @@ export default {
     }
 
     function scrollToBottom() {
-      const el = document.querySelector('.prompt-gen-thread');
-      if (el) el.scrollTop = el.scrollHeight;
+      if (threadRef.value) threadRef.value.scrollTop = threadRef.value.scrollHeight;
     }
 
     function onCopy(event, text) {
@@ -152,6 +152,7 @@ export default {
       conversationStarted,
       lastMessageIsGenerated,
       USE_CASES,
+      threadRef,
       onGenerate,
       onSendReply,
       onCopy,
@@ -180,11 +181,11 @@ export default {
             class="btn btn-primary"
             @click="onGenerate"
             :disabled="!rawInput.trim() || isLoading"
-          >{{ isLoading && !conversationStarted ? 'Starting…' : 'Generate' }}</button>
+          >{{ isLoading ? 'Generating…' : 'Generate' }}</button>
         </div>
       </div>
 
-      <div v-if="conversationStarted" class="prompt-gen-thread">
+      <div v-if="conversationStarted" class="prompt-gen-thread" ref="threadRef">
         <div
           v-for="(msg, i) in messages"
           :key="i"
