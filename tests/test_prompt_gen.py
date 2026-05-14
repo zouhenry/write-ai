@@ -157,3 +157,26 @@ def test_prompt_gen_json_parse_failure_returns_graceful_message():
     data = resp.json()
     assert data["phase"] == "interrogation"
     assert "rephrase" in data["message"].lower()
+
+
+def test_prompt_gen_retry_succeeds_on_second_attempt():
+    from main import app
+    import models
+    # First call returns non-JSON; second call returns valid JSON
+    good_payload = json.dumps({"phase": "interrogation", "message": "What is your goal?"})
+    mock_llm = MagicMock()
+    mock_llm.create_chat_completion.side_effect = [
+        {"choices": [{"message": {"content": "oops not json"}}], "usage": {}},
+        {"choices": [{"message": {"content": good_payload}}], "usage": {}},
+    ]
+    models.llm = mock_llm
+    client = TestClient(app)
+    resp = client.post("/prompt-gen", json={
+        "raw_input": "write a poem",
+        "use_case": "creative_writing",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["phase"] == "interrogation"
+    assert data["message"] == "What is your goal?"
+    assert mock_llm.create_chat_completion.call_count == 2

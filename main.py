@@ -613,6 +613,7 @@ async def prompt_gen(request: PromptGenRequest):
     except (json.JSONDecodeError, ValueError, KeyError, IndexError, TypeError):
         # Retry once with an explicit reminder
         try:
+            messages.append({"role": "assistant", "content": raw_content})
             messages.append({
                 "role": "user",
                 "content": "Remember: respond ONLY with a JSON object. Example: {\"phase\": \"interrogation\", \"message\": \"Your question here\"}"
@@ -621,10 +622,11 @@ async def prompt_gen(request: PromptGenRequest):
             raw_content = response["choices"][0]["message"]["content"].strip()
             clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw_content, flags=re.DOTALL).strip()
             parsed = json.loads(clean)
-            return PromptGenResponse(
-                phase=parsed.get("phase", "interrogation"),
-                message=parsed["message"],
-            )
+            retry_phase = parsed.get("phase", "interrogation")
+            retry_message = parsed.get("message", "")
+            if not retry_message:
+                raise ValueError("empty message")
+            return PromptGenResponse(phase=retry_phase, message=retry_message)
         except Exception:
             logger.warning(f"PromptGen JSON parse failed twice. Raw: {raw_content!r}")
             return PromptGenResponse(
