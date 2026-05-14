@@ -568,6 +568,68 @@ async def restructure_text(request: RestructureRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/prompt-gen", response_model=PromptGenResponse)
+async def prompt_gen(request: PromptGenRequest):
+    raw_input = request.raw_input.strip()
+    if not raw_input:
+        raise HTTPException(status_code=400, detail="Please enter a prompt idea")
+
+    use_case = request.use_case.strip().lower()
+    if use_case not in SYSTEM_PROMPTS:
+        raise HTTPException(status_code=400, detail=f"Unknown use case: {use_case!r}")
+
+    system_prompt = SYSTEM_PROMPTS[use_case]
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.append({"role": "user", "content": f"Raw prompt idea: {raw_input}"})
+    for msg in request.history:
+        role = "assistant" if msg.get("role") in ("assistant", "ai") else "user"
+        messages.append({"role": role, "content": msg["content"]})
+
+    def _call_llm():
+        return models.llm.create_chat_completion(
+            messages=messages,
+            temperature=0.3,
+            top_p=0.95,
+            top_k=65,
+            max_tokens=1024,
+            stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"],
+        )
+
+    raw_content = ""
+    try:
+        response = _call_llm()
+        raw_content = response["choices"][0]["message"]["content"].strip()
+        clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw_content, flags=re.DOTALL).strip()
+        parsed = json.loads(clean)
+        phase = parsed.get("phase", "interrogation")
+        message = parsed.get("message", "")
+        if not message:
+            raise ValueError("empty message")
+        return PromptGenResponse(phase=phase, message=message)
+    except (json.JSONDecodeError, ValueError, KeyError):
+        # Retry once with an explicit reminder
+        try:
+            messages.append({
+                "role": "user",
+                "content": "Remember: respond ONLY with a JSON object. Example: {\"phase\": \"interrogation\", \"message\": \"Your question here\"}"
+            })
+            response = _call_llm()
+            raw_content = response["choices"][0]["message"]["content"].strip()
+            clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw_content, flags=re.DOTALL).strip()
+            parsed = json.loads(clean)
+            return PromptGenResponse(
+                phase=parsed.get("phase", "interrogation"),
+                message=parsed["message"],
+            )
+        except Exception:
+            logger.warning(f"PromptGen JSON parse failed twice. Raw: {raw_content!r}")
+            return PromptGenResponse(
+                phase="interrogation",
+                message="Sorry, I had trouble processing that. Could you rephrase your last answer?",
+            )
+
+
 @app.get("/health")
 async def health_check():
     return {
