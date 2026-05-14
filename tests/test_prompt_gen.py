@@ -15,6 +15,19 @@ def test_prompt_gen_request_requires_raw_input():
         PromptGenRequest(use_case="coding")
 
 
+def test_prompt_gen_request_requires_use_case():
+    from main import PromptGenRequest
+    with pytest.raises(ValidationError):
+        PromptGenRequest(raw_input="make my API faster")
+
+
+def test_prompt_gen_request_accepts_any_use_case_string():
+    from main import PromptGenRequest
+    # The model accepts any string; the endpoint validates against SYSTEM_PROMPTS
+    req = PromptGenRequest(raw_input="test", use_case="unknown_value")
+    assert req.use_case == "unknown_value"
+
+
 def test_prompt_gen_response_fields():
     from main import PromptGenResponse
     resp = PromptGenResponse(phase="interrogation", message="What language?")
