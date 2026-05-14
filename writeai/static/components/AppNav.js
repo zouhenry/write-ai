@@ -57,6 +57,11 @@ export default {
               :class="{ active: activeTab === 'grammar' }"
               @click="setTab('grammar')"
             >Grammar Check</button>
+            <button
+              class="tab-btn"
+              :class="{ active: activeTab === 'prompt' }"
+              @click="setTab('prompt')"
+            >Prompt Gen</button>
           </div>
           <div>&nbsp;</div>
         </div>

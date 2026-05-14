@@ -12,8 +12,9 @@ import AppNav from './components/AppNav.js';
 import GrammarTab from './components/GrammarTab.js';
 import ParaphraseTab from './components/ParaphraseTab.js';
 import ChatTab from './components/ChatTab.js';
+import PromptGenTab from './components/PromptGenTab.js';
 
-const VALID_TABS = ['grammar', 'paraphrase', 'chat'];
+const VALID_TABS = ['grammar', 'paraphrase', 'chat', 'prompt'];
 
 function resolveInitialTab() {
   const hash = window.location.hash.slice(1);
@@ -26,7 +27,7 @@ function resolveInitialTab() {
 }
 
 const App = {
-  components: { AppNav, GrammarTab, ParaphraseTab, ChatTab },
+  components: { AppNav, GrammarTab, ParaphraseTab, ChatTab, PromptGenTab },
   setup() {
     const { isOffline, checkApiStatus } = useApiStatus();
     const { isDark, toggleTheme } = useTheme();
@@ -77,6 +78,7 @@ const App = {
       <GrammarTab    v-show="activeTab === 'grammar'"    />
       <ParaphraseTab v-show="activeTab === 'paraphrase'" />
       <ChatTab       v-show="activeTab === 'chat'"       />
+      <PromptGenTab  v-show="activeTab === 'prompt'"     />
     </div>
   `,
 };
