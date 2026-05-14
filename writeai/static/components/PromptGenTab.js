@@ -185,40 +185,41 @@ export default {
         </div>
       </div>
 
-      <div v-if="conversationStarted" class="prompt-gen-thread" ref="threadRef">
-        <div
-          v-for="(msg, i) in messages"
-          :key="i"
-          :class="['prompt-gen-msg', msg.role === 'user' ? 'prompt-gen-msg--user' : 'prompt-gen-msg--ai']"
-        >
-          <div v-if="msg.isGenerated" class="prompt-gen-output">
-            <div class="prompt-gen-output-header">
-              <span class="prompt-gen-output-label">✦ Generated Prompt</span>
-              <button class="copy-btn" @click="onCopy($event, msg.content)" title="Copy prompt">⧉</button>
+      <div v-if="conversationStarted" class="chat-container">
+        <div class="chat-history" ref="threadRef">
+          <div
+            v-for="(msg, i) in messages"
+            :key="i"
+            class="message"
+            :class="msg.role === 'user' ? 'user-message' : 'ai-message'"
+          >
+            <div v-if="msg.isGenerated" class="message-content prompt-gen-output">
+              <div class="prompt-gen-output-header">
+                <span class="prompt-gen-output-label">✦ Generated Prompt</span>
+                <button class="copy-btn" @click="onCopy($event, msg.content)" title="Copy prompt">⧉</button>
+              </div>
+              <pre class="prompt-gen-output-text">{{ msg.content }}</pre>
             </div>
-            <pre class="prompt-gen-output-text">{{ msg.content }}</pre>
+            <div v-else class="message-content">{{ msg.content }}</div>
           </div>
-          <div v-else class="prompt-gen-bubble">{{ msg.content }}</div>
+
+          <div v-if="isLoading" class="message ai-message loading-msg">
+            <div class="message-content">Thinking…</div>
+          </div>
         </div>
 
-        <div v-if="isLoading" class="prompt-gen-msg prompt-gen-msg--ai">
-          <div class="prompt-gen-bubble prompt-gen-bubble--thinking">…</div>
+        <div v-if="!lastMessageIsGenerated" class="chat-input-area">
+          <textarea
+            v-model="replyInput"
+            placeholder="Your answer…"
+            rows="2"
+            :disabled="isLoading"
+            @keydown.enter.exact.prevent="onSendReply"
+          ></textarea>
+          <button @click="onSendReply" :disabled="!replyInput.trim() || isLoading">
+            {{ isLoading ? 'Sending…' : 'Send' }}
+          </button>
         </div>
-      </div>
-
-      <div v-if="conversationStarted && !lastMessageIsGenerated" class="prompt-gen-reply-area">
-        <input
-          v-model="replyInput"
-          class="prompt-gen-reply-input"
-          placeholder="Your answer…"
-          :disabled="isLoading"
-          @keydown.enter.prevent="onSendReply"
-        />
-        <button
-          class="btn btn-primary"
-          @click="onSendReply"
-          :disabled="!replyInput.trim() || isLoading"
-        >{{ isLoading ? 'Sending…' : 'Send' }}</button>
       </div>
     </div>
   `,
