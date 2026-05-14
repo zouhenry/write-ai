@@ -1665,41 +1665,21 @@ body.dark-mode .ai-message .message-content blockquote {
 
 /* ── Prompt Gen Tab ────────────────────────────────────────── */
 
-.prompt-gen-input-area {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-}
-
-.prompt-gen-textarea {
-  width: 100%;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--gray-300);
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: 0.95rem;
-  resize: vertical;
-  background: white;
-  color: var(--gray-900);
-  transition: border-color 0.2s;
-}
-
-.prompt-gen-textarea:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-body.dark-mode .prompt-gen-textarea {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: #e2e8f0;
-}
-
 .prompt-gen-controls {
   display: flex;
-  gap: var(--space-sm);
   align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.prompt-gen-select-label {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+body.dark-mode .prompt-gen-select-label {
+  color: var(--gray-400);
 }
 
 .prompt-gen-select {

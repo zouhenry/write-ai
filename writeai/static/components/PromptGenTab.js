@@ -32,10 +32,10 @@ export default {
   name: 'PromptGenTab',
   setup() {
     const bannerVisible = ref(false);
-    const rawInput = ref('');
+    const rawInput = ref('');   // set once from the first message; reused for all subsequent API calls
     const useCase = ref('general');
-    const messages = ref([]);       // [{ role: 'assistant'|'user', content: string, isGenerated?: bool }]
-    const replyInput = ref('');
+    const messages = ref([]);
+    const inputText = ref('');
     const isLoading = ref(false);
     const conversationStarted = ref(false);
     const threadRef = ref(null);
@@ -49,16 +49,6 @@ export default {
       localStorage.setItem(BANNER_KEY, '1');
     }
 
-    function resetConversation() {
-      messages.value = [];
-      replyInput.value = '';
-      conversationStarted.value = false;
-      isLoading.value = false;
-    }
-
-    // Build the history array for the API from messages already in the thread.
-    // The rawInput is sent separately as raw_input, so we exclude the first user
-    // message (which is the raw prompt echo) from history.
     function buildHistory() {
       return messages.value
         .filter((m) => !m.isRawEcho)
@@ -70,7 +60,7 @@ export default {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          raw_input: rawInput.value.trim(),
+          raw_input: rawInput.value,
           use_case: useCase.value,
           history,
           phase: 'interrogation',
@@ -83,53 +73,48 @@ export default {
       return resp.json();
     }
 
-    async function onGenerate() {
-      if (!rawInput.value.trim() || isLoading.value) return;
-      resetConversation();
-      conversationStarted.value = true;
-      // Echo the raw input as the first user message (marked so it's excluded from history)
-      messages.value.push({ role: 'user', content: rawInput.value.trim(), isRawEcho: true });
-      isLoading.value = true;
-      try {
-        const data = await sendToApi([]);
-        messages.value.push({
-          role: 'assistant',
-          content: data.message,
-          isGenerated: data.phase === 'generation',
-        });
-      } catch (e) {
-        showToast(e.message, true);
-        conversationStarted.value = false;
-      } finally {
-        isLoading.value = false;
-        await nextTick();
-        scrollToBottom();
-      }
-    }
-
-    async function onSendReply() {
-      const text = replyInput.value.trim();
+    async function onSend() {
+      const text = inputText.value.trim();
       if (!text || isLoading.value) return;
-      replyInput.value = '';
-      messages.value.push({ role: 'user', content: text });
-      isLoading.value = true;
-      try {
-        const data = await sendToApi(buildHistory());
-        messages.value.push({
-          role: 'assistant',
-          content: data.message,
-          isGenerated: data.phase === 'generation',
-        });
-      } catch (e) {
-        showToast(e.message, true);
-      } finally {
-        isLoading.value = false;
-        await nextTick();
-        scrollToBottom();
-      }
-    }
+      inputText.value = '';
 
-    function scrollToBottom() {
+      if (!conversationStarted.value) {
+        // First message — becomes the raw prompt idea
+        rawInput.value = text;
+        conversationStarted.value = true;
+        messages.value.push({ role: 'user', content: text, isRawEcho: true });
+        isLoading.value = true;
+        try {
+          const data = await sendToApi([]);
+          messages.value.push({
+            role: 'assistant',
+            content: data.message,
+            isGenerated: data.phase === 'generation',
+          });
+        } catch (e) {
+          showToast(e.message, true);
+          conversationStarted.value = false;
+          messages.value = [];
+          rawInput.value = '';
+        }
+      } else {
+        // Subsequent messages — answers to clarifying questions
+        messages.value.push({ role: 'user', content: text });
+        isLoading.value = true;
+        try {
+          const data = await sendToApi(buildHistory());
+          messages.value.push({
+            role: 'assistant',
+            content: data.message,
+            isGenerated: data.phase === 'generation',
+          });
+        } catch (e) {
+          showToast(e.message, true);
+        }
+      }
+
+      isLoading.value = false;
+      await nextTick();
       if (threadRef.value) threadRef.value.scrollTop = threadRef.value.scrollHeight;
     }
 
@@ -141,67 +126,64 @@ export default {
       messages.value.length > 0 && messages.value[messages.value.length - 1].isGenerated
     );
 
+    const inputPlaceholder = computed(() =>
+      conversationStarted.value ? 'Your answer…' : 'Describe your prompt idea…'
+    );
+
     return {
       bannerVisible,
       dismissBanner,
-      rawInput,
       useCase,
       messages,
-      replyInput,
+      inputText,
       isLoading,
       conversationStarted,
       lastMessageIsGenerated,
+      inputPlaceholder,
       USE_CASES,
       threadRef,
-      onGenerate,
-      onSendReply,
+      onSend,
       onCopy,
     };
   },
   template: `
     <div class="tab-content active">
       <div v-if="bannerVisible" class="tab-description">
-        <p>Enter a rough prompt idea, select a use case, and let AI refine it into a structured prompt.</p>
+        <p>Describe your prompt idea, select a use case, and let AI refine it into a structured prompt.</p>
         <button class="banner-dismiss" @click="dismissBanner" aria-label="Dismiss">&#x2715;</button>
       </div>
 
-      <div class="prompt-gen-input-area">
-        <textarea
-          v-model="rawInput"
-          class="prompt-gen-textarea"
-          placeholder="Describe what you want your prompt to do..."
-          rows="4"
-          :disabled="isLoading"
-        ></textarea>
-        <div class="prompt-gen-controls">
-          <select v-model="useCase" class="prompt-gen-select" :disabled="isLoading">
-            <option v-for="uc in USE_CASES" :key="uc.value" :value="uc.value">{{ uc.label }}</option>
-          </select>
-          <button
-            class="btn btn-primary"
-            @click="onGenerate"
-            :disabled="!rawInput.trim() || isLoading"
-          >{{ isLoading ? 'Generating…' : 'Generate' }}</button>
-        </div>
+      <div class="prompt-gen-controls">
+        <label class="prompt-gen-select-label">Use case</label>
+        <select v-model="useCase" class="prompt-gen-select" :disabled="conversationStarted || isLoading">
+          <option v-for="uc in USE_CASES" :key="uc.value" :value="uc.value">{{ uc.label }}</option>
+        </select>
       </div>
 
-      <div v-if="conversationStarted" class="chat-container">
+      <div class="chat-container">
         <div class="chat-history" ref="threadRef">
-          <div
-            v-for="(msg, i) in messages"
-            :key="i"
-            class="message"
-            :class="msg.role === 'user' ? 'user-message' : 'ai-message'"
-          >
-            <div v-if="msg.isGenerated" class="message-content prompt-gen-output">
-              <div class="prompt-gen-output-header">
-                <span class="prompt-gen-output-label">✦ Generated Prompt</span>
-                <button class="copy-btn" @click="onCopy($event, msg.content)" title="Copy prompt">⧉</button>
-              </div>
-              <pre class="prompt-gen-output-text">{{ msg.content }}</pre>
+          <template v-if="messages.length === 0">
+            <div class="message ai-message">
+              <div class="message-content">Select a use case and describe your prompt idea to get started.</div>
             </div>
-            <div v-else class="message-content">{{ msg.content }}</div>
-          </div>
+          </template>
+          <template v-else>
+            <div
+              v-for="(msg, i) in messages"
+              :key="i"
+              class="message"
+              :class="msg.role === 'user' ? 'user-message' : 'ai-message'"
+            >
+              <div v-if="msg.isGenerated" class="message-content prompt-gen-output">
+                <div class="prompt-gen-output-header">
+                  <span class="prompt-gen-output-label">✦ Generated Prompt</span>
+                  <button class="copy-btn" @click="onCopy($event, msg.content)" title="Copy prompt">⧉</button>
+                </div>
+                <pre class="prompt-gen-output-text">{{ msg.content }}</pre>
+              </div>
+              <div v-else class="message-content">{{ msg.content }}</div>
+            </div>
+          </template>
 
           <div v-if="isLoading" class="message ai-message loading-msg">
             <div class="message-content">Thinking…</div>
@@ -210,13 +192,13 @@ export default {
 
         <div v-if="!lastMessageIsGenerated" class="chat-input-area">
           <textarea
-            v-model="replyInput"
-            placeholder="Your answer…"
-            rows="2"
+            v-model="inputText"
+            :placeholder="inputPlaceholder"
+            rows="3"
             :disabled="isLoading"
-            @keydown.enter.exact.prevent="onSendReply"
+            @keydown.enter.exact.prevent="onSend"
           ></textarea>
-          <button @click="onSendReply" :disabled="!replyInput.trim() || isLoading">
+          <button @click="onSend" :disabled="!inputText.trim() || isLoading">
             {{ isLoading ? 'Sending…' : 'Send' }}
           </button>
         </div>
