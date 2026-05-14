@@ -181,7 +181,7 @@ export default {
             class="btn btn-primary"
             @click="onGenerate"
             :disabled="!rawInput.trim() || isLoading"
-          >{{ isLoading ? 'Generating…' : 'Generate' }}</button>
+          >{{ isLoading ? 'Loading…' : 'Generate' }}</button>
         </div>
       </div>
 
