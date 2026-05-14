@@ -125,6 +125,19 @@ def test_prompt_gen_unknown_use_case_returns_400():
     assert "use case" in resp.json()["detail"].lower()
 
 
+def test_prompt_gen_model_not_loaded_returns_503():
+    from main import app
+    import models
+    models.llm = None
+    client = TestClient(app)
+    resp = client.post("/prompt-gen", json={
+        "raw_input": "make my API faster",
+        "use_case": "coding",
+    })
+    assert resp.status_code == 503
+    assert "not loaded" in resp.json()["detail"].lower()
+
+
 def test_prompt_gen_json_parse_failure_returns_graceful_message():
     from main import app
     import models

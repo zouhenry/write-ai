@@ -578,6 +578,9 @@ async def prompt_gen(request: PromptGenRequest):
     if use_case not in SYSTEM_PROMPTS:
         raise HTTPException(status_code=400, detail=f"Unknown use case: {use_case!r}")
 
+    if models.llm is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
     system_prompt = SYSTEM_PROMPTS[use_case]
 
     messages = [{"role": "system", "content": system_prompt}]
@@ -607,7 +610,7 @@ async def prompt_gen(request: PromptGenRequest):
         if not message:
             raise ValueError("empty message")
         return PromptGenResponse(phase=phase, message=message)
-    except (json.JSONDecodeError, ValueError, KeyError):
+    except (json.JSONDecodeError, ValueError, KeyError, IndexError, TypeError):
         # Retry once with an explicit reminder
         try:
             messages.append({
