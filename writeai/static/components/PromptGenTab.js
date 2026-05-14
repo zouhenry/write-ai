@@ -34,7 +34,7 @@ export default {
     const bannerVisible = ref(false);
     const rawInput = ref('');
     const useCase = ref('general');
-    const messages = ref([]);
+    const messages = ref([]);       // [{ role: 'assistant'|'user', content: string, isGenerated?: bool }]
     const replyInput = ref('');
     const isLoading = ref(false);
     const conversationStarted = ref(false);
@@ -55,6 +55,9 @@ export default {
       isLoading.value = false;
     }
 
+    // Build the history array for the API from messages already in the thread.
+    // The rawInput is sent separately as raw_input, so we exclude the first user
+    // message (which is the raw prompt echo) from history.
     function buildHistory() {
       return messages.value
         .filter((m) => !m.isRawEcho)
@@ -83,6 +86,7 @@ export default {
       if (!rawInput.value.trim() || isLoading.value) return;
       resetConversation();
       conversationStarted.value = true;
+      // Echo the raw input as the first user message (marked so it's excluded from history)
       messages.value.push({ role: 'user', content: rawInput.value.trim(), isRawEcho: true });
       isLoading.value = true;
       try {
@@ -188,7 +192,7 @@ export default {
         >
           <div v-if="msg.isGenerated" class="prompt-gen-output">
             <div class="prompt-gen-output-header">
-              <span class="prompt-gen-output-label">❆ Generated Prompt</span>
+              <span class="prompt-gen-output-label">✦ Generated Prompt</span>
               <button class="copy-btn" @click="onCopy($event, msg.content)" title="Copy prompt">⧉</button>
             </div>
             <pre class="prompt-gen-output-text">{{ msg.content }}</pre>
