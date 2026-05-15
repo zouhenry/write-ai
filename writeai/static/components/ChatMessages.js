@@ -212,80 +212,84 @@ export default {
       if (!text || loading.value) return;
       inputText.value = '';
 
-      let currentRawInput = props.rawInput;
+      const rawEchoMsg = chatHistory.value.find((m) => m.isRawEcho);
+      let currentRawInput = rawEchoMsg ? rawEchoMsg.content : props.rawInput;
 
-      if (!conversationStarted.value) {
-        currentRawInput = text;
-        emit('update:rawInput', text);
-        conversationStarted.value = true;
-        chatHistory.value = [...chatHistory.value, { role: 'user', content: text, isRawEcho: true }];
-        loading.value = true;
-        try {
-          const resp = await fetch(props.endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              raw_input: currentRawInput,
-              use_case: props.useCase,
-              history: [],
-              phase: 'interrogation',
-            }),
-          });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || `Server error ${resp.status}`);
+      loading.value = true;
+      try {
+        if (!conversationStarted.value) {
+          currentRawInput = text;
+          emit('update:rawInput', text);
+          conversationStarted.value = true;
+          chatHistory.value = [...chatHistory.value, { role: 'user', content: text, isRawEcho: true }];
+          try {
+            const resp = await fetch(props.endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                raw_input: currentRawInput,
+                use_case: props.useCase,
+                history: [],
+                phase: 'interrogation',
+              }),
+            });
+            if (!resp.ok) {
+              const err = await resp.json().catch(() => ({}));
+              throw new Error(err.detail || `Server error ${resp.status}`);
+            }
+            const data = await resp.json();
+            chatHistory.value = [
+              ...chatHistory.value,
+              { role: 'assistant', content: data.message, isGenerated: data.phase === 'generation' },
+            ];
+            persistMessages(props.activeConversationId, chatHistory.value);
+            // Set title to first 40 chars of raw input
+            const titled = props.conversations.map((c) =>
+              c.id === props.activeConversationId && c.title === 'New conversation'
+                ? { ...c, title: text.slice(0, 40) }
+                : c,
+            );
+            saveConversations(titled);
+            emit('update-conversations', titled);
+          } catch (e) {
+            showToast(e.message, true);
+            conversationStarted.value = false;
+            chatHistory.value = [];
+            emit('update:rawInput', '');
           }
-          const data = await resp.json();
-          chatHistory.value = [
-            ...chatHistory.value,
-            { role: 'assistant', content: data.message, isGenerated: data.phase === 'generation' },
-          ];
-          persistMessages(props.activeConversationId, chatHistory.value);
-          // Set title to first 40 chars of raw input
-          const titled = props.conversations.map((c) =>
-            c.id === props.activeConversationId && c.title === 'New conversation'
-              ? { ...c, title: text.slice(0, 40) }
-              : c,
-          );
-          saveConversations(titled);
-          emit('update-conversations', titled);
-        } catch (e) {
-          showToast(e.message, true);
-          conversationStarted.value = false;
-          chatHistory.value = [];
-          emit('update:rawInput', '');
-        }
-      } else {
-        chatHistory.value = [...chatHistory.value, { role: 'user', content: text }];
-        loading.value = true;
-        try {
-          const resp = await fetch(props.endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              raw_input: currentRawInput,
-              use_case: props.useCase,
-              history: buildPromptGenHistory(),
-              phase: 'interrogation',
-            }),
-          });
-          if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || `Server error ${resp.status}`);
+        } else {
+          const historyBeforeSend = [...chatHistory.value];
+          chatHistory.value = [...chatHistory.value, { role: 'user', content: text }];
+          try {
+            const resp = await fetch(props.endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                raw_input: currentRawInput,
+                use_case: props.useCase,
+                history: buildPromptGenHistory(),
+                phase: 'interrogation',
+              }),
+            });
+            if (!resp.ok) {
+              const err = await resp.json().catch(() => ({}));
+              throw new Error(err.detail || `Server error ${resp.status}`);
+            }
+            const data = await resp.json();
+            chatHistory.value = [
+              ...chatHistory.value,
+              { role: 'assistant', content: data.message, isGenerated: data.phase === 'generation' },
+            ];
+            persistMessages(props.activeConversationId, chatHistory.value);
+          } catch (e) {
+            showToast(e.message, true);
+            chatHistory.value = historyBeforeSend;
           }
-          const data = await resp.json();
-          chatHistory.value = [
-            ...chatHistory.value,
-            { role: 'assistant', content: data.message, isGenerated: data.phase === 'generation' },
-          ];
-          persistMessages(props.activeConversationId, chatHistory.value);
-        } catch (e) {
-          showToast(e.message, true);
         }
+      } finally {
+        loading.value = false;
+        scrollToBottom();
       }
-
-      loading.value = false;
-      scrollToBottom();
     }
 
     function onCopy(event, text) {
