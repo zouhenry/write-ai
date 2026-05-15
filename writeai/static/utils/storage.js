@@ -83,3 +83,51 @@ export function initConversations() {
   setActiveConversationId(activeId);
   return { conversations, activeId };
 }
+
+export function createStorageAdapter(storageKey, activeKey) {
+  return {
+    generateId,
+    enforceStorageCap,
+    loadConversations() {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey) || '[]');
+      } catch {
+        return [];
+      }
+    },
+    saveConversations(conversations) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(conversations));
+      } catch (e) {
+        console.error('saveConversations failed:', e);
+        throw e;
+      }
+    },
+    getActiveConversationId() {
+      return localStorage.getItem(activeKey);
+    },
+    setActiveConversationId(id) {
+      localStorage.setItem(activeKey, id);
+    },
+    initConversations() {
+      let conversations = this.loadConversations();
+      if (conversations.length === 0) {
+        const first = {
+          id: generateId(),
+          title: 'New conversation',
+          createdAt: Date.now(),
+          messages: [],
+        };
+        conversations = [first];
+        this.saveConversations(conversations);
+      }
+      conversations.sort((a, b) => b.createdAt - a.createdAt);
+      let activeId = this.getActiveConversationId() || conversations[0].id;
+      if (!conversations.find((c) => c.id === activeId)) {
+        activeId = conversations[0].id;
+      }
+      this.setActiveConversationId(activeId);
+      return { conversations, activeId };
+    },
+  };
+}
