@@ -76,7 +76,7 @@ pipx run --spec git+https://github.com/zouhenry/write-ai.git write-ai
 
 **Select model size** (`sm` default, `md`, or `lg`):
 ```bash
-MODEL_SIZE=md pipx run --spec git+https://github.com/zouhenry/write-ai.git write-ai
+MODEL_SIZE=md pipx run --no-cache --spec git+https://github.com/zouhenry/write-ai.git write-ai
 ```
 
 **Force update to latest version:**
