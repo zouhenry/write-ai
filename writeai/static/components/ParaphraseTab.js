@@ -1,7 +1,10 @@
 import {
   ref,
   computed,
+  onMounted,
 } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+
+const BANNER_KEY = 'banner_dismissed_paraphrase';
 import { copyToClipboard } from '../utils/clipboard.js';
 
 function escapeHtml(unsafe) {
@@ -32,6 +35,16 @@ export default {
     const inputText = ref('');
     const rephraseData = ref(null);
     const loading = ref(false);
+    const bannerVisible = ref(false);
+
+    onMounted(() => {
+      bannerVisible.value = !localStorage.getItem(BANNER_KEY);
+    });
+
+    function dismissBanner() {
+      bannerVisible.value = false;
+      localStorage.setItem(BANNER_KEY, '1');
+    }
 
     const results = computed(() => {
       if (!rephraseData.value) return [];
@@ -104,6 +117,8 @@ export default {
       rephraseData,
       loading,
       results,
+      bannerVisible,
+      dismissBanner,
       rephraseText,
       clearText,
       copyResult,
@@ -113,8 +128,9 @@ export default {
   },
   template: `
     <div class="tab-content active">
-      <div class="tab-description">
+      <div v-if="bannerVisible" class="tab-description">
         <p>Rephrase your text in different styles: corrected grammar, formal tone, casual conversation, or concise version.</p>
+        <button class="banner-dismiss" @click="dismissBanner" aria-label="Dismiss">&#x2715;</button>
       </div>
       <div class="structure-container">
         <div class="structure-input-section">

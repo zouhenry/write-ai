@@ -2,6 +2,8 @@ import {
   ref,
   onMounted,
 } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+
+const BANNER_KEY = 'banner_dismissed_chat';
 import {
   initConversations,
   saveConversations,
@@ -18,12 +20,19 @@ export default {
   setup() {
     const conversations = ref([]);
     const activeConversationId = ref('');
+    const bannerVisible = ref(false);
 
     onMounted(() => {
       const init = initConversations();
       conversations.value = init.conversations;
       activeConversationId.value = init.activeId;
+      bannerVisible.value = !localStorage.getItem(BANNER_KEY);
     });
+
+    function dismissBanner() {
+      bannerVisible.value = false;
+      localStorage.setItem(BANNER_KEY, '1');
+    }
 
     function selectConversation(id) {
       if (id === activeConversationId.value) return;
@@ -73,6 +82,8 @@ export default {
     return {
       conversations,
       activeConversationId,
+      bannerVisible,
+      dismissBanner,
       selectConversation,
       deleteConversation,
       newChat,
@@ -81,8 +92,9 @@ export default {
   },
   template: `
     <div class="tab-content active chat-tab-content">
-      <div class="tab-description">
+      <div v-if="bannerVisible" class="tab-description">
         <p>Chat with an AI assistant about writing, grammar, or any other topic.</p>
+        <button class="banner-dismiss" @click="dismissBanner" aria-label="Dismiss">&#x2715;</button>
       </div>
       <div class="chat-layout">
         <ChatSidebar

@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background diagonal split -->
+    <clipPath id="rounded-rect">
+      <rect x="0" y="0" width="512" height="512" rx="96" ry="96"/>
+    </clipPath>
+
+    <!-- Wand glow gradient -->
+    <linearGradient id="wand-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9b6cff"/>
+      <stop offset="30%" stop-color="#f5d44a"/>
+      <stop offset="60%" stop-color="#ffe87a"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+
+    <!-- Wand trail glow -->
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Star glow filter -->
+    <filter id="star-glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background: rounded square -->
+  <g clip-path="url(#rounded-rect)">
+    <!-- Full background starts as indigo -->
+    <rect x="0" y="0" width="512" height="512" fill="#3730a3"/>
+    <!-- Lavender triangle top-left -->
+    <polygon points="0,0 512,0 0,512" fill="#c8cce8"/>
+  </g>
+
+  <!-- Wand body: diagonal stroke from bottom-left to top-right -->
+  <!-- Wand handle (purple/dark base) -->
+  <line x1="88" y1="424" x2="340" y2="172"
+    stroke="#7c6baf" stroke-width="22" stroke-linecap="round"
+    clip-path="url(#rounded-rect)"/>
+
+  <!-- Wand shaft (golden yellow) -->
+  <line x1="100" y1="412" x2="320" y2="192"
+    stroke="url(#wand-gradient)" stroke-width="13" stroke-linecap="round"
+    clip-path="url(#rounded-rect)" filter="url(#glow)"/>
+
+  <!-- Wand highlight (white shimmer along top edge) -->
+  <line x1="108" y1="400" x2="310" y2="198"
+    stroke="rgba(255,255,255,0.55)" stroke-width="4" stroke-linecap="round"
+    clip-path="url(#rounded-rect)"/>
+
+  <!-- Sparkle trail dots along the wand -->
+  <g clip-path="url(#rounded-rect)" opacity="0.85">
+    <circle cx="140" cy="372" r="5" fill="#ffe87a"/>
+    <circle cx="168" cy="344" r="4" fill="#f5d44a"/>
+    <circle cx="196" cy="316" r="6" fill="#ffffff" opacity="0.7"/>
+    <circle cx="224" cy="288" r="3.5" fill="#ffe87a"/>
+    <circle cx="252" cy="260" r="5" fill="#f5d44a"/>
+    <circle cx="280" cy="232" r="4" fill="#ffffff" opacity="0.6"/>
+    <circle cx="308" cy="204" r="6" fill="#ffe87a"/>
+  </g>
+
+  <!-- Small hearts near the tip -->
+  <g transform="translate(348, 152)" clip-path="url(#rounded-rect)">
+    <!-- Heart 1 (larger, red) -->
+    <g transform="translate(10, -18) scale(0.55)">
+      <path d="M0,-8 C0,-16 -12,-20 -12,-10 C-12,0 0,10 0,10 C0,10 12,0 12,-10 C12,-20 0,-16 0,-8 Z"
+        fill="#e8304a"/>
+    </g>
+    <!-- Heart 2 (smaller, pink) -->
+    <g transform="translate(26, -4) scale(0.35)">
+      <path d="M0,-8 C0,-16 -12,-20 -12,-10 C-12,0 0,10 0,10 C0,10 12,0 12,-10 C12,-20 0,-16 0,-8 Z"
+        fill="#ff6b8a"/>
+    </g>
+  </g>
+
+  <!-- 4-pointed star sparkle at the tip -->
+  <g transform="translate(346, 148)" filter="url(#star-glow)" clip-path="url(#rounded-rect)">
+    <!-- Star arms -->
+    <path d="M0,-32 C-3,-6 -3,-6 -32,0 C-3,3 -3,3 0,32 C3,3 3,3 32,0 C3,-6 3,-6 0,-32 Z"
+      fill="white" opacity="0.98"/>
+    <!-- Smaller cross overlay for extra crispness -->
+    <path d="M0,-20 C-2,-4 -2,-4 -20,0 C-2,2 -2,2 0,20 C2,2 2,2 20,0 C2,-4 2,-4 0,-20 Z"
+      fill="white"/>
+    <!-- Center bright dot -->
+    <circle cx="0" cy="0" r="5" fill="white"/>
+  </g>
+
+  <!-- Outer subtle vignette border -->
+  <rect x="0" y="0" width="512" height="512" rx="96" ry="96"
+    fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+</svg>

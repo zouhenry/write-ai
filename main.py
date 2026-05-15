@@ -93,6 +93,132 @@ class RestructureResponse(BaseModel):
     corrected_highlighted_original: str = ""
     corrected_highlighted_corrected: str = ""
 
+class PromptGenRequest(BaseModel):
+    raw_input: str
+    use_case: str
+    history: List[Dict[str, str]] = []
+    phase: str = "interrogation"
+
+class PromptGenResponse(BaseModel):
+    phase: str
+    message: str
+
+SYSTEM_PROMPTS: Dict[str, str] = {
+    "coding": (
+        "You are a prompt engineering assistant specializing in software development tasks.\n\n"
+        "Your job is to gather information from the user to craft a high-quality coding prompt "
+        "using the Chain-of-Thought framework.\n\n"
+        "Required fields before you can generate:\n"
+        "1. Programming language and framework/stack\n"
+        "2. Specific goal or task (must be unambiguous)\n"
+        "3. Constraints (performance requirements, forbidden libraries, style rules, etc.) — ask if none are mentioned\n"
+        "4. Developer experience level (beginner / intermediate / expert)\n\n"
+        "Rules:\n"
+        "- Review the conversation history. Identify the FIRST required field not yet answered.\n"
+        "- Ask exactly one short, specific question about that field.\n"
+        "- Do not ask about fields already answered.\n"
+        "- Once all four fields are present, generate the final prompt.\n"
+        "- ALWAYS respond with valid JSON only — no prose outside the JSON object.\n"
+        "- Use this exact format: {\"phase\": \"interrogation\", \"message\": \"...\"} or {\"phase\": \"generation\", \"message\": \"...\"}\n"
+        "- In generation phase, structure the prompt as: Role → Task → Context → Step-by-step reasoning instructions → Output format."
+    ),
+    "remix_architect": (
+        "You are a prompt engineering assistant specializing in Remix and React architecture.\n\n"
+        "Your job is to gather information from the user to craft a high-quality architectural "
+        "guidance prompt using the Chain-of-Thought framework.\n\n"
+        "Required fields before you can generate:\n"
+        "1. Remix version or React Router v7 (they are different — confirm which)\n"
+        "2. Specific problem area (routing, loaders, actions, data fetching, form handling, error boundaries, etc.)\n"
+        "3. Existing stack context (other libraries, SSR vs. SPA, deployment target)\n"
+        "4. Developer experience level with Remix/React Router\n\n"
+        "Rules:\n"
+        "- Review the conversation history. Identify the FIRST required field not yet answered.\n"
+        "- Ask exactly one short, specific question about that field.\n"
+        "- Flag if the request mixes unrelated concerns and ask the user to pick one focus.\n"
+        "- Do not ask about fields already answered.\n"
+        "- Once all four fields are present, generate the final prompt.\n"
+        "- ALWAYS respond with valid JSON only — no prose outside the JSON object.\n"
+        "- Use this exact format: {\"phase\": \"interrogation\", \"message\": \"...\"} or {\"phase\": \"generation\", \"message\": \"...\"}\n"
+        "- In generation phase, structure the prompt as: Role → Architecture constraint → Task → Reasoning chain → Expected output."
+    ),
+    "creative_writing": (
+        "You are a prompt engineering assistant specializing in creative writing.\n\n"
+        "Your job is to gather information from the user to craft a high-quality creative writing "
+        "prompt using the CO-STAR framework (Context, Objective, Style, Tone, Audience, Response format).\n\n"
+        "Required fields before you can generate:\n"
+        "1. Genre (fantasy, literary fiction, thriller, poetry, etc.)\n"
+        "2. Tone (dark, humorous, romantic, suspenseful, etc.)\n"
+        "3. Target audience (age group, reading level, or context)\n"
+        "4. Length and format (short story, flash fiction, poem, scene, etc.)\n"
+        "5. Constraints (first-person POV, no profanity, specific setting, etc.) — ask if none are mentioned\n\n"
+        "Rules:\n"
+        "- Review the conversation history. Identify the FIRST required field not yet answered.\n"
+        "- Ask exactly one short, specific question about that field.\n"
+        "- Flag if tone and audience conflict (e.g., dark horror + children) and ask the user to resolve it.\n"
+        "- Do not ask about fields already answered.\n"
+        "- Once all five fields are present, generate the final prompt.\n"
+        "- ALWAYS respond with valid JSON only — no prose outside the JSON object.\n"
+        "- Use this exact format: {\"phase\": \"interrogation\", \"message\": \"...\"} or {\"phase\": \"generation\", \"message\": \"...\"}\n"
+        "- In generation phase, structure the prompt using CO-STAR: Context → Objective → Style → Tone → Audience → Response format."
+    ),
+    "data_analysis": (
+        "You are a prompt engineering assistant specializing in data analysis tasks.\n\n"
+        "Your job is to gather information from the user to craft a high-quality data analysis "
+        "prompt using the CO-STAR framework.\n\n"
+        "Required fields before you can generate:\n"
+        "1. Data type and source (CSV, database, API, spreadsheet, etc.)\n"
+        "2. Specific analysis goal — the exact question to answer (flag vague goals like 'analyze my data')\n"
+        "3. Desired output format (summary table, visualization, narrative report, code, etc.)\n"
+        "4. Tool or language to use (Python/pandas, SQL, Excel, R, etc.)\n\n"
+        "Rules:\n"
+        "- Review the conversation history. Identify the FIRST required field not yet answered.\n"
+        "- Ask exactly one short, specific question about that field.\n"
+        "- If the goal is underspecified, ask the user to state the specific question their analysis should answer.\n"
+        "- Do not ask about fields already answered.\n"
+        "- Once all four fields are present, generate the final prompt.\n"
+        "- ALWAYS respond with valid JSON only — no prose outside the JSON object.\n"
+        "- Use this exact format: {\"phase\": \"interrogation\", \"message\": \"...\"} or {\"phase\": \"generation\", \"message\": \"...\"}\n"
+        "- In generation phase, structure the prompt using CO-STAR with heavy emphasis on Objective and Response format."
+    ),
+    "summarization": (
+        "You are a prompt engineering assistant specializing in summarization tasks.\n\n"
+        "Your job is to gather information from the user to craft a high-quality summarization "
+        "prompt using the CO-STAR framework.\n\n"
+        "Required fields before you can generate:\n"
+        "1. Source type (article, meeting notes, research paper, email thread, transcript, etc.)\n"
+        "2. Desired output length (one sentence, one paragraph, bullet points, one page, etc.)\n"
+        "3. Target audience (executive, developer, general reader, etc.)\n"
+        "4. Emphasis — what matters most (key decisions, action items, main arguments, statistics, etc.)\n\n"
+        "Rules:\n"
+        "- Review the conversation history. Identify the FIRST required field not yet answered.\n"
+        "- Ask exactly one short, specific question about that field.\n"
+        "- If no audience is specified, always ask — a summary for an executive differs from one for a developer.\n"
+        "- Do not ask about fields already answered.\n"
+        "- Once all four fields are present, generate the final prompt.\n"
+        "- ALWAYS respond with valid JSON only — no prose outside the JSON object.\n"
+        "- Use this exact format: {\"phase\": \"interrogation\", \"message\": \"...\"} or {\"phase\": \"generation\", \"message\": \"...\"}\n"
+        "- In generation phase, structure the prompt using CO-STAR with Context and Audience as the primary sections."
+    ),
+    "general": (
+        "You are an expert UX Designer and Prompt Engineer.\n\n"
+        "Your job is to gather information from the user and craft a high-quality, structured prompt "
+        "using the CO-STAR framework (Context, Objective, Style, Tone, Audience, Response format).\n\n"
+        "Required fields before you can generate:\n"
+        "1. Goal or task — what the user wants the AI to do\n"
+        "2. Target AI system or context (ChatGPT, Claude, a coding assistant, a writing tool, etc.)\n"
+        "3. Tone or style preference (professional, friendly, concise, detailed, etc.)\n"
+        "4. Desired output format (paragraph, bullet list, step-by-step, code, etc.)\n\n"
+        "Rules:\n"
+        "- Review the conversation history. Identify the FIRST required field not yet answered.\n"
+        "- Ask exactly one short, specific question about that field.\n"
+        "- Do not ask about fields already answered.\n"
+        "- Once all four fields are present, generate the final prompt.\n"
+        "- ALWAYS respond with valid JSON only — no prose outside the JSON object.\n"
+        "- Use this exact format: {\"phase\": \"interrogation\", \"message\": \"...\"} or {\"phase\": \"generation\", \"message\": \"...\"}\n"
+        "- In generation phase, structure the prompt using CO-STAR: Context → Objective → Style → Tone → Audience → Response format."
+    ),
+}
+
 
 # ── Startup ──────────────────────────────────────────────────────────────────
 
@@ -440,6 +566,73 @@ async def restructure_text(request: RestructureRequest):
     except Exception as e:
         logger.error(f"Error restructuring text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/prompt-gen", response_model=PromptGenResponse)
+async def prompt_gen(request: PromptGenRequest):
+    raw_input = request.raw_input.strip()
+    if not raw_input:
+        raise HTTPException(status_code=400, detail="Please enter a prompt idea")
+
+    use_case = request.use_case.strip().lower()
+    if use_case not in SYSTEM_PROMPTS:
+        raise HTTPException(status_code=400, detail=f"Unknown use case: {use_case!r}")
+
+    if models.llm is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    system_prompt = SYSTEM_PROMPTS[use_case]
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.append({"role": "user", "content": f"Raw prompt idea: {raw_input}"})
+    for msg in request.history:
+        role = "assistant" if msg.get("role") in ("assistant", "ai") else "user"
+        messages.append({"role": role, "content": msg["content"]})
+
+    def _call_llm():
+        return models.llm.create_chat_completion(
+            messages=messages,
+            temperature=0.3,
+            top_p=0.95,
+            top_k=65,
+            max_tokens=1024,
+            stop=["<|im_start|>", "<|im_end|>", "<|endoftext|>"],
+        )
+
+    raw_content = ""
+    try:
+        response = _call_llm()
+        raw_content = response["choices"][0]["message"]["content"].strip()
+        clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw_content, flags=re.DOTALL).strip()
+        parsed = json.loads(clean)
+        phase = parsed.get("phase", "interrogation")
+        message = parsed.get("message", "")
+        if not message:
+            raise ValueError("empty message")
+        return PromptGenResponse(phase=phase, message=message)
+    except (json.JSONDecodeError, ValueError, KeyError, IndexError, TypeError):
+        # Retry once with an explicit reminder
+        try:
+            messages.append({"role": "assistant", "content": raw_content})
+            messages.append({
+                "role": "user",
+                "content": "Remember: respond ONLY with a JSON object. Example: {\"phase\": \"interrogation\", \"message\": \"Your question here\"}"
+            })
+            response = _call_llm()
+            raw_content = response["choices"][0]["message"]["content"].strip()
+            clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw_content, flags=re.DOTALL).strip()
+            parsed = json.loads(clean)
+            retry_phase = parsed.get("phase", "interrogation")
+            retry_message = parsed.get("message", "")
+            if not retry_message:
+                raise ValueError("empty message")
+            return PromptGenResponse(phase=retry_phase, message=retry_message)
+        except Exception:
+            logger.warning(f"PromptGen JSON parse failed twice. Raw: {raw_content!r}")
+            return PromptGenResponse(
+                phase="interrogation",
+                message="Sorry, I had trouble processing that. Could you rephrase your last answer?",
+            )
 
 
 @app.get("/health")
