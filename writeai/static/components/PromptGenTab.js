@@ -1,6 +1,7 @@
 import {
   ref,
   watch,
+  computed,
   onMounted,
 } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
 import { createStorageAdapter } from '../utils/storage.js';
@@ -28,6 +29,11 @@ export default {
     const bannerVisible = ref(false);
     const useCase = ref('general');
     const rawInput = ref('');
+
+    const conversationHasMessages = computed(() => {
+      const conv = conversations.value.find((c) => c.id === activeConversationId.value);
+      return conv ? conv.messages.length > 0 : false;
+    });
 
     onMounted(() => {
       const init = storage.initConversations();
@@ -120,6 +126,7 @@ export default {
       bannerVisible,
       useCase,
       rawInput,
+      conversationHasMessages,
       USE_CASES,
       dismissBanner,
       selectConversation,
@@ -160,6 +167,7 @@ export default {
             <select
               v-model="useCase"
               class="prompt-gen-select"
+              :disabled="conversationHasMessages"
               @change="onUseCaseChange"
             >
               <option v-for="uc in USE_CASES" :key="uc.value" :value="uc.value">{{ uc.label }}</option>
