@@ -15,6 +15,7 @@ export default {
     streaming:             { type: Boolean, default: true },
     rawInput:              { type: String,  default: '' },
     useCase:               { type: String,  default: 'general' },
+    storageAdapter:        { type: Object,  default: () => ({ saveConversations, loadConversations }) },
   },
   emits: ['update-conversations', 'update:rawInput'],
   setup(props, { emit }) {
@@ -51,7 +52,7 @@ export default {
       const convs = props.conversations.map((c) =>
         c.id === id ? { ...c, messages: [...clean] } : c,
       );
-      saveConversations(convs);
+      props.storageAdapter.saveConversations(convs);
       emit('update-conversations', convs);
     }
 
@@ -147,18 +148,18 @@ export default {
               ? { ...c, title: message.slice(0, 40) }
               : c,
           );
-          saveConversations(placeholderConvs);
+          props.storageAdapter.saveConversations(placeholderConvs);
           emit('update-conversations', placeholderConvs);
 
           const titleConvId = props.activeConversationId;
           generateTitle(message, aiResponse)
             .then((title) => {
               if (!title) return;
-              const latest = loadConversations();
+              const latest = props.storageAdapter.loadConversations();
               const i = latest.findIndex((c) => c.id === titleConvId);
               if (i !== -1) {
                 latest[i].title = title;
-                saveConversations(latest);
+                props.storageAdapter.saveConversations(latest);
                 emit('update-conversations', latest);
               }
             })
@@ -249,7 +250,7 @@ export default {
                 ? { ...c, title: text.slice(0, 40) }
                 : c,
             );
-            saveConversations(titled);
+            props.storageAdapter.saveConversations(titled);
             emit('update-conversations', titled);
           } catch (e) {
             showToast(e.message, true);

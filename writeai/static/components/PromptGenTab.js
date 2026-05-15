@@ -151,6 +151,7 @@ export default {
           :streaming="false"
           :rawInput="rawInput"
           :useCase="useCase"
+          :storageAdapter="storage"
           @update-conversations="onUpdateConversations"
           @update:rawInput="onUpdateRawInput"
         >
