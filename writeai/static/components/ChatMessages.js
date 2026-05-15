@@ -47,10 +47,8 @@ export default {
     }
 
     function persistMessages(id, messages) {
-      // Only strip isRawEcho (display-only); keep isGenerated so generated blocks render on reload
-      const clean = messages.map(({ isRawEcho, ...m }) => m);
       const convs = props.conversations.map((c) =>
-        c.id === id ? { ...c, messages: [...clean] } : c,
+        c.id === id ? { ...c, messages: [...messages] } : c,
       );
       props.storageAdapter.saveConversations(convs);
       emit('update-conversations', convs);
