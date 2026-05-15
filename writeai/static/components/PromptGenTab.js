@@ -1,12 +1,14 @@
 import {
   ref,
-  computed,
-  nextTick,
+  watch,
   onMounted,
 } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
-import { copyToClipboard } from '../utils/clipboard.js';
+import { createStorageAdapter } from '../utils/storage.js';
+import ChatSidebar from './ChatSidebar.js';
+import ChatMessages from './ChatMessages.js';
 
 const BANNER_KEY = 'banner_dismissed_prompt_gen';
+const storage = createStorageAdapter('promptGenConversations', 'promptGenActiveId');
 
 const USE_CASES = [
   { value: 'general',          label: 'General' },
@@ -17,191 +19,152 @@ const USE_CASES = [
   { value: 'summarization',    label: 'Summarization' },
 ];
 
-function showToast(message, isError = false) {
-  const toast = document.createElement('div');
-  toast.textContent = message;
-  toast.className = 'toast' + (isError ? ' toast-error' : '');
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = 'toastSlideOut 0.3s ease';
-    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
-  }, 3000);
-}
-
 export default {
   name: 'PromptGenTab',
+  components: { ChatSidebar, ChatMessages },
   setup() {
+    const conversations = ref([]);
+    const activeConversationId = ref('');
     const bannerVisible = ref(false);
-    const rawInput = ref('');   // set once from the first message; reused for all subsequent API calls
     const useCase = ref('general');
-    const messages = ref([]);
-    const inputText = ref('');
-    const isLoading = ref(false);
-    const conversationStarted = ref(false);
-    const threadRef = ref(null);
+    const rawInput = ref('');
 
     onMounted(() => {
+      const init = storage.initConversations();
+      conversations.value = init.conversations;
+      activeConversationId.value = init.activeId;
       bannerVisible.value = !localStorage.getItem(BANNER_KEY);
+      syncUseCaseFromActive();
     });
+
+    function syncUseCaseFromActive() {
+      const conv = conversations.value.find((c) => c.id === activeConversationId.value);
+      useCase.value = conv?.useCase || 'general';
+      rawInput.value = conv?.rawInput || '';
+    }
+
+    watch(activeConversationId, syncUseCaseFromActive);
 
     function dismissBanner() {
       bannerVisible.value = false;
       localStorage.setItem(BANNER_KEY, '1');
     }
 
-    function buildHistory() {
-      return messages.value
-        .filter((m) => !m.isRawEcho)
-        .map((m) => ({ role: m.role, content: m.content }));
+    function selectConversation(id) {
+      if (id === activeConversationId.value) return;
+      activeConversationId.value = id;
+      storage.setActiveConversationId(id);
     }
 
-    async function sendToApi(history) {
-      const resp = await fetch('/prompt-gen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          raw_input: rawInput.value,
-          use_case: useCase.value,
-          history,
-          phase: 'interrogation',
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.detail || `Server error ${resp.status}`);
-      }
-      return resp.json();
-    }
-
-    async function onSend() {
-      const text = inputText.value.trim();
-      if (!text || isLoading.value) return;
-      inputText.value = '';
-
-      if (!conversationStarted.value) {
-        // First message — becomes the raw prompt idea
-        rawInput.value = text;
-        conversationStarted.value = true;
-        messages.value.push({ role: 'user', content: text, isRawEcho: true });
-        isLoading.value = true;
-        try {
-          const data = await sendToApi([]);
-          messages.value.push({
-            role: 'assistant',
-            content: data.message,
-            isGenerated: data.phase === 'generation',
-          });
-        } catch (e) {
-          showToast(e.message, true);
-          conversationStarted.value = false;
-          messages.value = [];
-          rawInput.value = '';
+    function deleteConversation(id) {
+      const convs = conversations.value.filter((c) => c.id !== id);
+      if (id === activeConversationId.value) {
+        if (convs.length === 0) {
+          conversations.value = convs;
+          newChat();
+          return;
         }
-      } else {
-        // Subsequent messages — answers to clarifying questions
-        messages.value.push({ role: 'user', content: text });
-        isLoading.value = true;
-        try {
-          const data = await sendToApi(buildHistory());
-          messages.value.push({
-            role: 'assistant',
-            content: data.message,
-            isGenerated: data.phase === 'generation',
-          });
-        } catch (e) {
-          showToast(e.message, true);
-        }
+        convs.sort((a, b) => b.createdAt - a.createdAt);
+        activeConversationId.value = convs[0].id;
+        storage.setActiveConversationId(convs[0].id);
       }
-
-      isLoading.value = false;
-      await nextTick();
-      if (threadRef.value) threadRef.value.scrollTop = threadRef.value.scrollHeight;
+      storage.saveConversations(convs);
+      conversations.value = convs;
     }
 
-    function onCopy(event, text) {
-      copyToClipboard(text, event.currentTarget, (err) => showToast('Copy failed', true));
+    function newChat() {
+      const newConv = {
+        id: storage.generateId(),
+        title: 'New conversation',
+        createdAt: Date.now(),
+        messages: [],
+      };
+      let convs = conversations.value.filter(
+        (c) => c.messages.length > 0 || c.id === activeConversationId.value,
+      );
+      convs.unshift(newConv);
+      convs = storage.enforceStorageCap(convs);
+      storage.saveConversations(convs);
+      conversations.value = convs;
+      activeConversationId.value = newConv.id;
+      storage.setActiveConversationId(newConv.id);
     }
 
-    const lastMessageIsGenerated = computed(() =>
-      messages.value.length > 0 && messages.value[messages.value.length - 1].isGenerated
-    );
+    function onUpdateConversations(convs) {
+      // Stamp useCase onto the active conversation so it survives reload
+      const stamped = convs.map((c) =>
+        c.id === activeConversationId.value
+          ? { ...c, useCase: useCase.value, rawInput: rawInput.value }
+          : c,
+      );
+      storage.saveConversations(stamped);
+      conversations.value = stamped;
+    }
 
-    const inputPlaceholder = computed(() =>
-      conversationStarted.value ? 'Your answer…' : 'Describe your prompt idea…'
-    );
+    function onUpdateRawInput(val) {
+      rawInput.value = val;
+    }
+
+    function onUseCaseChange() {
+      // Stamp updated useCase immediately on the active conversation
+      const stamped = conversations.value.map((c) =>
+        c.id === activeConversationId.value ? { ...c, useCase: useCase.value } : c,
+      );
+      storage.saveConversations(stamped);
+      conversations.value = stamped;
+    }
 
     return {
+      conversations,
+      activeConversationId,
       bannerVisible,
-      dismissBanner,
       useCase,
-      messages,
-      inputText,
-      isLoading,
-      conversationStarted,
-      lastMessageIsGenerated,
-      inputPlaceholder,
+      rawInput,
       USE_CASES,
-      threadRef,
-      onSend,
-      onCopy,
+      dismissBanner,
+      selectConversation,
+      deleteConversation,
+      newChat,
+      onUpdateConversations,
+      onUpdateRawInput,
+      onUseCaseChange,
     };
   },
   template: `
-    <div class="tab-content active">
+    <div class="tab-content active chat-tab-content">
       <div v-if="bannerVisible" class="tab-description">
         <p>Describe your prompt idea, select a use case, and let AI refine it into a structured prompt.</p>
         <button class="banner-dismiss" @click="dismissBanner" aria-label="Dismiss">&#x2715;</button>
       </div>
-
-      <div class="prompt-gen-controls">
-        <label class="prompt-gen-select-label">Use case</label>
-        <select v-model="useCase" class="prompt-gen-select" :disabled="conversationStarted || isLoading">
-          <option v-for="uc in USE_CASES" :key="uc.value" :value="uc.value">{{ uc.label }}</option>
-        </select>
-      </div>
-
-      <div class="chat-container">
-        <div class="chat-history" ref="threadRef">
-          <template v-if="messages.length === 0">
-            <div class="message ai-message">
-              <div class="message-content">Select a use case and describe your prompt idea to get started.</div>
-            </div>
-          </template>
-          <template v-else>
-            <div
-              v-for="(msg, i) in messages"
-              :key="i"
-              class="message"
-              :class="msg.role === 'user' ? 'user-message' : 'ai-message'"
+      <div class="chat-layout">
+        <ChatSidebar
+          :conversations="conversations"
+          :activeConversationId="activeConversationId"
+          @select="selectConversation"
+          @delete="deleteConversation"
+          @new-chat="newChat"
+        />
+        <ChatMessages
+          :conversations="conversations"
+          :activeConversationId="activeConversationId"
+          :endpoint="'/prompt-gen'"
+          :streaming="false"
+          :rawInput="rawInput"
+          :useCase="useCase"
+          @update-conversations="onUpdateConversations"
+          @update:rawInput="onUpdateRawInput"
+        >
+          <div class="prompt-gen-controls">
+            <label class="prompt-gen-select-label">Use case</label>
+            <select
+              v-model="useCase"
+              class="prompt-gen-select"
+              @change="onUseCaseChange"
             >
-              <div v-if="msg.isGenerated" class="message-content prompt-gen-output">
-                <div class="prompt-gen-output-header">
-                  <span class="prompt-gen-output-label">✦ Generated Prompt</span>
-                  <button class="copy-btn" @click="onCopy($event, msg.content)" title="Copy prompt">⧉</button>
-                </div>
-                <pre class="prompt-gen-output-text">{{ msg.content }}</pre>
-              </div>
-              <div v-else class="message-content">{{ msg.content }}</div>
-            </div>
-          </template>
-
-          <div v-if="isLoading" class="message ai-message loading-msg">
-            <div class="message-content">Thinking…</div>
+              <option v-for="uc in USE_CASES" :key="uc.value" :value="uc.value">{{ uc.label }}</option>
+            </select>
           </div>
-        </div>
-
-        <div v-if="!lastMessageIsGenerated" class="chat-input-area">
-          <textarea
-            v-model="inputText"
-            :placeholder="inputPlaceholder"
-            rows="3"
-            :disabled="isLoading"
-            @keydown.enter.exact.prevent="onSend"
-          ></textarea>
-          <button @click="onSend" :disabled="!inputText.trim() || isLoading">
-            {{ isLoading ? 'Sending…' : 'Send' }}
-          </button>
-        </div>
+        </ChatMessages>
       </div>
     </div>
   `,
